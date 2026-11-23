@@ -135,6 +135,8 @@ const App = (function () {
     }
 
     window.scrollTo({ top: 0, behavior: "smooth" });
+    const mainEl = document.getElementById("app-main");
+    if (mainEl) mainEl.scrollTop = 0;
     if (window.lucide) lucide.createIcons();
   }
 
