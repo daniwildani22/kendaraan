@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0F5132"/>
+      <stop offset="50%" stop-color="#146C43"/>
+      <stop offset="100%" stop-color="#198754"/>
+    </linearGradient>
+  </defs>
+  <rect width="192" height="192" rx="48" fill="url(#bgGrad)"/>
+  <circle cx="96" cy="95" r="50" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="10" stroke-dasharray="240" stroke-dashoffset="60" stroke-linecap="round"/>
+  <circle cx="96" cy="95" r="50" fill="none" stroke="#34D399" stroke-width="10" stroke-dasharray="240" stroke-dashoffset="120" stroke-linecap="round"/>
+  <circle cx="96" cy="95" r="12" fill="#FFFFFF"/>
+  <circle cx="96" cy="95" r="5" fill="#0F5132"/>
+  <line x1="96" y1="95" x2="124" y2="68" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round"/>
+  <line x1="96" y1="95" x2="124" y2="68" stroke="#34D399" stroke-width="3" stroke-linecap="round"/>
+  <text x="96" y="156" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-size="16" font-weight="800" fill="#FFFFFF" text-anchor="middle" letter-spacing="2">KENDARA</text>
+  <text x="96" y="172" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-size="9" font-weight="700" fill="#A7F3D0" text-anchor="middle" letter-spacing="3">TRACK</text>
+</svg>

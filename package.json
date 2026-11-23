@@ -1,0 +1,21 @@
+{
+  "name": "kendaratrack",
+  "version": "1.0.0",
+  "description": "KendaraTrack - Mobile-First Personal Vehicle Activity & Financial Reminder Tracker",
+  "private": true,
+  "scripts": {
+    "start": "npx serve .",
+    "dev": "npx serve ."
+  },
+  "keywords": [
+    "vehicle-tracker",
+    "pwa",
+    "kendaratrack",
+    "fintech",
+    "maintenance",
+    "supabase",
+    "vercel"
+  ],
+  "author": "KendaraTrack",
+  "license": "MIT"
+}

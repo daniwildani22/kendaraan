@@ -1,0 +1,135 @@
+/* =========================================================================
+   KENDARATRACK - FINORA EMERALD UI DESIGN SYSTEM STYLES
+   ========================================================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --color-emerald-deep: #0F5132;
+  --color-emerald-mid: #146C43;
+  --color-emerald-forest: #198754;
+  --color-bg-soft: #F8FAFC;
+  --color-surface: #FFFFFF;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-bg-soft);
+  color: #0F172A;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+/* Finora Emerald Gradient Utility */
+.bg-finora-emerald {
+  background: linear-gradient(135deg, #0F5132 0%, #146C43 50%, #198754 100%);
+}
+
+.bg-finora-emerald-subtle {
+  background: linear-gradient(135deg, rgba(15, 81, 50, 0.08) 0%, rgba(25, 135, 84, 0.04) 100%);
+}
+
+/* Card Elevations matching Finora UI */
+.finora-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 1.25rem; /* 20px */
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.02), 0 1px 2px -1px rgba(0, 0, 0, 0.02);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.finora-card:hover {
+  box-shadow: 0 4px 12px 0 rgba(0, 0, 0, 0.05);
+}
+
+/* Glassmorphism & Translucent Bars */
+.glass-nav {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-top: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+/* Buttons */
+.finora-btn-primary {
+  background: linear-gradient(135deg, #0F5132 0%, #198754 100%);
+  color: #FFFFFF;
+  font-weight: 600;
+  border-radius: 0.875rem; /* 14px */
+  transition: all 0.15s ease-in-out;
+  box-shadow: 0 2px 4px 0 rgba(15, 81, 50, 0.2);
+}
+
+.finora-btn-primary:active {
+  transform: scale(0.98);
+  opacity: 0.92;
+}
+
+/* Mobile Frame Container for Desktop Preview */
+.mobile-viewport-container {
+  max-width: 440px;
+  min-height: 100vh;
+  margin: 0 auto;
+  position: relative;
+  background-color: #F8FAFC;
+  box-shadow: 0 20px 40px -15px rgba(15, 23, 42, 0.07);
+}
+
+@media (min-width: 768px) {
+  body {
+    background: #EDF2F7;
+    padding-top: 1.5rem;
+    padding-bottom: 2rem;
+  }
+  .mobile-viewport-container {
+    border-radius: 2.25rem; /* 36px */
+    border: 8px solid #0F172A;
+    box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.1);
+    overflow: hidden;
+    min-height: 890px;
+  }
+  .glass-nav {
+    max-width: calc(440px - 16px);
+    border-bottom-left-radius: 1.75rem;
+    border-bottom-right-radius: 1.75rem;
+  }
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.25s ease-out forwards;
+}
