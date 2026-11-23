@@ -21,12 +21,22 @@ const App = (function () {
 
   function updateGreetingText() {
     const greetingEl = document.getElementById("header-greeting-time");
+    const user = (typeof KendaraAuth !== "undefined") ? KendaraAuth.getUser() : null;
     if (greetingEl) {
       const hour = new Date().getHours();
-      if (hour >= 4 && hour < 11) greetingEl.innerText = "Good Morning!";
-      else if (hour >= 11 && hour < 15) greetingEl.innerText = "Good Afternoon!";
-      else if (hour >= 15 && hour < 19) greetingEl.innerText = "Good Evening!";
-      else greetingEl.innerText = "Good Night!";
+      let timeGreet = "Good Morning!";
+      if (hour >= 4 && hour < 11) timeGreet = "Good Morning!";
+      else if (hour >= 11 && hour < 15) timeGreet = "Good Afternoon!";
+      else if (hour >= 15 && hour < 19) timeGreet = "Good Evening!";
+      else timeGreet = "Good Night!";
+
+      if (user && user.name) {
+        const firstName = user.name.split(" ")[0];
+        const isDemo = user.provider === "guest" || user.is_demo;
+        greetingEl.innerHTML = `${timeGreet}, <span class="font-extrabold text-[#0B4F9C]">${Utils.escapeHTML(firstName)}</span>${isDemo ? ' <span class="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">Demo</span>' : ''}`;
+      } else {
+        greetingEl.innerText = timeGreet;
+      }
     }
   }
 
@@ -250,7 +260,24 @@ const App = (function () {
     if (!container) return;
 
     if (!vehicle) {
-      container.innerHTML = "";
+      container.innerHTML = `
+        <div class="p-6 bg-white rounded-3xl border border-dashed border-blue-200 text-center space-y-3 shadow-sm">
+          <div class="w-12 h-12 mx-auto rounded-2xl bg-blue-50 text-[#0B4F9C] flex items-center justify-center">
+            <i data-lucide="plus-circle" class="w-6 h-6"></i>
+          </div>
+          <div>
+            <h4 class="text-sm font-bold text-slate-900">Garasi Anda Masih Kosong</h4>
+            <p class="text-xs text-slate-500 mt-1 max-w-xs mx-auto">
+              Daftarkan motor atau mobil pertama Anda untuk mulai memantau oli, servis, pajak & pengeluaran operasional.
+            </p>
+          </div>
+          <button onclick="App.openAddVehicleModal()" class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#0A3981] to-[#0B4F9C] text-white text-xs font-bold shadow-md hover:shadow-lg active:scale-95 transition-all inline-flex items-center gap-1.5">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            <span>Daftarkan Kendaraan Pertama</span>
+          </button>
+        </div>
+      `;
+      if (window.lucide) lucide.createIcons();
       return;
     }
 
@@ -341,7 +368,24 @@ const App = (function () {
     if (!container) return;
 
     if (!vehicle) {
-      container.innerHTML = "";
+      container.innerHTML = `
+        <div class="p-6 bg-white rounded-3xl border border-dashed border-blue-200 text-center space-y-3 shadow-sm">
+          <div class="w-12 h-12 mx-auto rounded-2xl bg-blue-50 text-[#0B4F9C] flex items-center justify-center">
+            <i data-lucide="plus-circle" class="w-6 h-6"></i>
+          </div>
+          <div>
+            <h4 class="text-sm font-bold text-slate-900">Garasi Anda Masih Kosong</h4>
+            <p class="text-xs text-slate-500 mt-1 max-w-xs mx-auto">
+              Daftarkan motor atau mobil pertama Anda untuk mulai memantau oli, servis, pajak & pengeluaran operasional.
+            </p>
+          </div>
+          <button onclick="App.openAddVehicleModal()" class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#0A3981] to-[#0B4F9C] text-white text-xs font-bold shadow-md hover:shadow-lg active:scale-95 transition-all inline-flex items-center gap-1.5">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            <span>Daftarkan Kendaraan Pertama</span>
+          </button>
+        </div>
+      `;
+      if (window.lucide) lucide.createIcons();
       return;
     }
 

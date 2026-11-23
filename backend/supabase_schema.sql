@@ -146,7 +146,9 @@ CREATE TRIGGER trigger_update_transactions_updated_at
 BEFORE UPDATE ON public.transactions
 FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
 
--- ROW LEVEL SECURITY (RLS) POLICIES
+-- =========================================================================
+-- ROW LEVEL SECURITY (RLS) POLICIES - DATA ISOLATION PER USER
+-- =========================================================================
 ALTER TABLE public.vehicles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.maintenance_logs ENABLE ROW LEVEL SECURITY;
@@ -158,18 +160,27 @@ GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated;
 GRANT ALL ON ALL ROUTINES IN SCHEMA public TO anon, authenticated;
 
--- Allow public access for anonymous demo or owner-based access when Auth is enabled
-DROP POLICY IF EXISTS "Public & authenticated access vehicles" ON public.vehicles;
-CREATE POLICY "Public & authenticated access vehicles" ON public.vehicles FOR ALL USING (true) WITH CHECK (true);
+-- Policy Multi-User: Pengguna hanya dapat membaca dan menulis data miliknya sendiri (user_id = auth.uid())
+-- Jika data sampel awal (user_id IS NULL), dapat dilihat bersama sebagai referensi umum.
+DROP POLICY IF EXISTS "Multi-user access vehicles" ON public.vehicles;
+CREATE POLICY "Multi-user access vehicles" ON public.vehicles 
+FOR ALL USING (auth.uid() = user_id OR user_id IS NULL) 
+WITH CHECK (auth.uid() = user_id OR user_id IS NULL);
 
-DROP POLICY IF EXISTS "Public & authenticated access transactions" ON public.transactions;
-CREATE POLICY "Public & authenticated access transactions" ON public.transactions FOR ALL USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Multi-user access transactions" ON public.transactions;
+CREATE POLICY "Multi-user access transactions" ON public.transactions 
+FOR ALL USING (auth.uid() = user_id OR user_id IS NULL) 
+WITH CHECK (auth.uid() = user_id OR user_id IS NULL);
 
-DROP POLICY IF EXISTS "Public & authenticated access maintenance" ON public.maintenance_logs;
-CREATE POLICY "Public & authenticated access maintenance" ON public.maintenance_logs FOR ALL USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Multi-user access maintenance" ON public.maintenance_logs;
+CREATE POLICY "Multi-user access maintenance" ON public.maintenance_logs 
+FOR ALL USING (auth.uid() = user_id OR user_id IS NULL) 
+WITH CHECK (auth.uid() = user_id OR user_id IS NULL);
 
-DROP POLICY IF EXISTS "Public & authenticated access schedules" ON public.schedules;
-CREATE POLICY "Public & authenticated access schedules" ON public.schedules FOR ALL USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Multi-user access schedules" ON public.schedules;
+CREATE POLICY "Multi-user access schedules" ON public.schedules 
+FOR ALL USING (auth.uid() = user_id OR user_id IS NULL) 
+WITH CHECK (auth.uid() = user_id OR user_id IS NULL);
 
 -- SEED DATA (Sampel Data Kendaraan Indonesia)
 INSERT INTO public.vehicles (

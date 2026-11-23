@@ -8,12 +8,27 @@
 
 const KendaraAPI = (function () {
   const CONFIG_KEY = "kendaratrack_app_config";
+
+  /**
+   * Dynamic Per-User Local Storage Key Resolver
+   * - Guest / Demo User: Uses demo seed keys (pre-populated with Honda Vario 160 & Avanza)
+   * - Registered User: Uses clean isolated keys scoped by user.id
+   */
+  function getStorageKey(keyName) {
+    const user = (typeof KendaraAuth !== "undefined") ? KendaraAuth.getUser() : null;
+    const isGuest = !user || user.provider === "guest" || user.is_demo;
+    if (isGuest) {
+      return `kendaratrack_demo_${keyName.toLowerCase()}`;
+    }
+    return `kendaratrack_u_${user.id}_${keyName.toLowerCase()}`;
+  }
+
   const STORAGE_KEYS = {
-    VEHICLES: "kendaratrack_vehicles",
-    TRANSACTIONS: "kendaratrack_transactions",
-    MAINTENANCE: "kendaratrack_maintenance",
-    SCHEDULES: "kendaratrack_schedules",
-    ACTIVE_VEHICLE: "kendaratrack_active_vehicle_id"
+    get VEHICLES() { return getStorageKey("vehicles"); },
+    get TRANSACTIONS() { return getStorageKey("transactions"); },
+    get MAINTENANCE() { return getStorageKey("maintenance"); },
+    get SCHEDULES() { return getStorageKey("schedules"); },
+    get ACTIVE_VEHICLE() { return getStorageKey("active_vehicle"); }
   };
 
   const globalDefaults = (typeof window !== "undefined" && window.APP_CONFIG) || {};
@@ -91,22 +106,24 @@ const KendaraAPI = (function () {
     localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
   }
 
-  // Initialize seed data for LOCAL_DEMO if storage is empty
+  // Initialize seed data for LOCAL_DEMO if demo storage is empty
   function initLocalStorageIfNeeded() {
-    if (!localStorage.getItem(STORAGE_KEYS.VEHICLES)) {
-      localStorage.setItem(STORAGE_KEYS.VEHICLES, JSON.stringify(SEED_VEHICLES));
-    }
-    if (!localStorage.getItem(STORAGE_KEYS.TRANSACTIONS)) {
-      localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(SEED_TRANSACTIONS));
-    }
-    if (!localStorage.getItem(STORAGE_KEYS.MAINTENANCE)) {
-      localStorage.setItem(STORAGE_KEYS.MAINTENANCE, JSON.stringify(SEED_MAINTENANCE_LOGS));
-    }
-    if (!localStorage.getItem(STORAGE_KEYS.SCHEDULES)) {
-      localStorage.setItem(STORAGE_KEYS.SCHEDULES, JSON.stringify(SEED_SCHEDULES));
-    }
-    if (!localStorage.getItem(STORAGE_KEYS.ACTIVE_VEHICLE)) {
-      localStorage.setItem(STORAGE_KEYS.ACTIVE_VEHICLE, "veh-001");
+    const demoVehiclesKey = "kendaratrack_demo_vehicles";
+    if (!localStorage.getItem(demoVehiclesKey)) {
+      const legacyVehicles = localStorage.getItem("kendaratrack_vehicles");
+      if (legacyVehicles) {
+        localStorage.setItem(demoVehiclesKey, legacyVehicles);
+        localStorage.setItem("kendaratrack_demo_transactions", localStorage.getItem("kendaratrack_transactions") || JSON.stringify(SEED_TRANSACTIONS));
+        localStorage.setItem("kendaratrack_demo_maintenance", localStorage.getItem("kendaratrack_maintenance") || JSON.stringify(SEED_MAINTENANCE_LOGS));
+        localStorage.setItem("kendaratrack_demo_schedules", localStorage.getItem("kendaratrack_schedules") || JSON.stringify(SEED_SCHEDULES));
+        localStorage.setItem("kendaratrack_demo_active_vehicle", localStorage.getItem("kendaratrack_active_vehicle_id") || "veh-001");
+      } else {
+        localStorage.setItem(demoVehiclesKey, JSON.stringify(SEED_VEHICLES));
+        localStorage.setItem("kendaratrack_demo_transactions", JSON.stringify(SEED_TRANSACTIONS));
+        localStorage.setItem("kendaratrack_demo_maintenance", JSON.stringify(SEED_MAINTENANCE_LOGS));
+        localStorage.setItem("kendaratrack_demo_schedules", JSON.stringify(SEED_SCHEDULES));
+        localStorage.setItem("kendaratrack_demo_active_vehicle", "veh-001");
+      }
     }
   }
 
@@ -533,10 +550,12 @@ const KendaraAPI = (function () {
   const SupabaseAdapter = {
     getHeaders() {
       const key = (config.supabaseAnonKey || "").trim();
+      const user = (typeof KendaraAuth !== "undefined") ? KendaraAuth.getUser() : null;
+      const bearer = (user && user.token && user.token.startsWith("ey")) ? user.token : key;
       return {
         "Content-Type": "application/json",
         apikey: key,
-        Authorization: `Bearer ${key}`,
+        Authorization: `Bearer ${bearer}`,
         Prefer: "return=representation"
       };
     },
@@ -590,8 +609,13 @@ const KendaraAPI = (function () {
     },
 
     async getVehicles() {
+      const user = (typeof KendaraAuth !== "undefined") ? KendaraAuth.getUser() : null;
       try {
-        return await this.fetchSupabase("vehicles?select=*");
+        let endpoint = "vehicles?select=*&order=created_at.asc";
+        if (user && user.id && user.provider === "supabase") {
+          endpoint = `vehicles?user_id=eq.${user.id}&order=created_at.asc`;
+        }
+        return await this.fetchSupabase(endpoint);
       } catch (e) {
         console.warn("Supabase fetch failed, fallback to local:", e);
         return LocalAdapter.getVehicles();
@@ -599,6 +623,10 @@ const KendaraAPI = (function () {
     },
 
     async saveVehicle(vehicle) {
+      const user = (typeof KendaraAuth !== "undefined") ? KendaraAuth.getUser() : null;
+      if (user && user.id && user.provider === "supabase" && !vehicle.user_id) {
+        vehicle.user_id = user.id;
+      }
       try {
         const res = await this.fetchSupabase("vehicles", {
           method: "POST",
@@ -633,10 +661,14 @@ const KendaraAPI = (function () {
     },
 
     async getTransactions(vehicleId = null) {
+      const user = (typeof KendaraAuth !== "undefined") ? KendaraAuth.getUser() : null;
       try {
-        const query = vehicleId
+        let query = vehicleId
           ? `transactions?vehicle_id=eq.${vehicleId}&order=date.desc`
           : "transactions?order=date.desc";
+        if (user && user.id && user.provider === "supabase" && !vehicleId) {
+          query = `transactions?user_id=eq.${user.id}&order=date.desc`;
+        }
         return await this.fetchSupabase(query);
       } catch (e) {
         return LocalAdapter.getTransactions(vehicleId);
@@ -644,6 +676,10 @@ const KendaraAPI = (function () {
     },
 
     async addTransaction(tx) {
+      const user = (typeof KendaraAuth !== "undefined") ? KendaraAuth.getUser() : null;
+      if (user && user.id && user.provider === "supabase" && !tx.user_id) {
+        tx.user_id = user.id;
+      }
       try {
         const res = await this.fetchSupabase("transactions", {
           method: "POST",
@@ -677,10 +713,14 @@ const KendaraAPI = (function () {
     },
 
     async getMaintenanceLogs(vehicleId = null) {
+      const user = (typeof KendaraAuth !== "undefined") ? KendaraAuth.getUser() : null;
       try {
-        const query = vehicleId
+        let query = vehicleId
           ? `maintenance_logs?vehicle_id=eq.${vehicleId}&order=date.desc`
           : "maintenance_logs?order=date.desc";
+        if (user && user.id && user.provider === "supabase" && !vehicleId) {
+          query = `maintenance_logs?user_id=eq.${user.id}&order=date.desc`;
+        }
         return await this.fetchSupabase(query);
       } catch (e) {
         return LocalAdapter.getMaintenanceLogs(vehicleId);
@@ -688,6 +728,10 @@ const KendaraAPI = (function () {
     },
 
     async addMaintenanceLog(log) {
+      const user = (typeof KendaraAuth !== "undefined") ? KendaraAuth.getUser() : null;
+      if (user && user.id && user.provider === "supabase" && !log.user_id) {
+        log.user_id = user.id;
+      }
       try {
         const res = await this.fetchSupabase("maintenance_logs", {
           method: "POST",
@@ -709,10 +753,14 @@ const KendaraAPI = (function () {
     },
 
     async getSchedules(vehicleId = null) {
+      const user = (typeof KendaraAuth !== "undefined") ? KendaraAuth.getUser() : null;
       try {
-        const query = vehicleId
+        let query = vehicleId
           ? `schedules?vehicle_id=eq.${vehicleId}&order=due_date.asc`
           : "schedules?order=due_date.asc";
+        if (user && user.id && user.provider === "supabase" && !vehicleId) {
+          query = `schedules?user_id=eq.${user.id}&order=due_date.asc`;
+        }
         return await this.fetchSupabase(query);
       } catch (e) {
         return LocalAdapter.getSchedules(vehicleId);
@@ -720,6 +768,10 @@ const KendaraAPI = (function () {
     },
 
     async addSchedule(sch) {
+      const user = (typeof KendaraAuth !== "undefined") ? KendaraAuth.getUser() : null;
+      if (user && user.id && user.provider === "supabase" && !sch.user_id) {
+        sch.user_id = user.id;
+      }
       try {
         const res = await this.fetchSupabase("schedules", {
           method: "POST",
@@ -775,19 +827,39 @@ const KendaraAPI = (function () {
     },
 
     getActiveVehicleId() {
-      return localStorage.getItem(STORAGE_KEYS.ACTIVE_VEHICLE) || "veh-001";
+      const stored = localStorage.getItem(STORAGE_KEYS.ACTIVE_VEHICLE);
+      if (stored) return stored;
+      const user = (typeof KendaraAuth !== "undefined") ? KendaraAuth.getUser() : null;
+      if (!user || user.provider === "guest" || user.is_demo) {
+        return "veh-001";
+      }
+      return null;
     },
 
     setActiveVehicleId(id) {
-      localStorage.setItem(STORAGE_KEYS.ACTIVE_VEHICLE, id);
+      if (id) {
+        localStorage.setItem(STORAGE_KEYS.ACTIVE_VEHICLE, id);
+      } else {
+        localStorage.removeItem(STORAGE_KEYS.ACTIVE_VEHICLE);
+      }
     },
 
     async resetToDemoData() {
-      localStorage.setItem(STORAGE_KEYS.VEHICLES, JSON.stringify(SEED_VEHICLES));
-      localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(SEED_TRANSACTIONS));
-      localStorage.setItem(STORAGE_KEYS.MAINTENANCE, JSON.stringify(SEED_MAINTENANCE_LOGS));
-      localStorage.setItem(STORAGE_KEYS.SCHEDULES, JSON.stringify(SEED_SCHEDULES));
-      localStorage.setItem(STORAGE_KEYS.ACTIVE_VEHICLE, "veh-001");
+      const user = (typeof KendaraAuth !== "undefined") ? KendaraAuth.getUser() : null;
+      const isGuest = !user || user.provider === "guest" || user.is_demo;
+      if (isGuest) {
+        localStorage.setItem("kendaratrack_demo_vehicles", JSON.stringify(SEED_VEHICLES));
+        localStorage.setItem("kendaratrack_demo_transactions", JSON.stringify(SEED_TRANSACTIONS));
+        localStorage.setItem("kendaratrack_demo_maintenance", JSON.stringify(SEED_MAINTENANCE_LOGS));
+        localStorage.setItem("kendaratrack_demo_schedules", JSON.stringify(SEED_SCHEDULES));
+        localStorage.setItem("kendaratrack_demo_active_vehicle", "veh-001");
+      } else {
+        localStorage.removeItem(STORAGE_KEYS.VEHICLES);
+        localStorage.removeItem(STORAGE_KEYS.TRANSACTIONS);
+        localStorage.removeItem(STORAGE_KEYS.MAINTENANCE);
+        localStorage.removeItem(STORAGE_KEYS.SCHEDULES);
+        localStorage.removeItem(STORAGE_KEYS.ACTIVE_VEHICLE);
+      }
       return true;
     },
 
@@ -1004,7 +1076,8 @@ const KendaraAuth = (function () {
           name: data.user.user_metadata?.name || cleanEmail.split("@")[0],
           avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&q=80",
           token: data.access_token,
-          provider: "supabase"
+          provider: "supabase",
+          is_demo: false
         };
         setUser(userObj);
         return userObj;
@@ -1017,12 +1090,13 @@ const KendaraAuth = (function () {
     const namePart = cleanEmail.split("@")[0].replace(/[._]/g, " ");
     const formattedName = namePart.charAt(0).toUpperCase() + namePart.slice(1);
     const userObj = {
-      id: "usr-" + Date.now(),
+      id: "usr-" + cleanEmail.replace(/[^a-zA-Z0-9]/g, "_"),
       email: cleanEmail,
       name: formattedName || "Pengendara",
       avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&q=80",
       token: "local-jwt-" + Date.now(),
-      provider: "local"
+      provider: "local",
+      is_demo: false
     };
     setUser(userObj);
     return userObj;
@@ -1061,7 +1135,8 @@ const KendaraAuth = (function () {
           name: cleanName,
           avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&q=80",
           token: data.access_token || "pending_confirmation",
-          provider: "supabase"
+          provider: "supabase",
+          is_demo: false
         };
         setUser(userObj);
         return userObj;
@@ -1072,12 +1147,13 @@ const KendaraAuth = (function () {
 
     // Local registration
     const userObj = {
-      id: "usr-" + Date.now(),
+      id: "usr-" + cleanEmail.replace(/[^a-zA-Z0-9]/g, "_"),
       email: cleanEmail,
       name: cleanName,
       avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&q=80",
       token: "local-jwt-" + Date.now(),
-      provider: "local"
+      provider: "local",
+      is_demo: false
     };
     setUser(userObj);
     return userObj;
@@ -1086,11 +1162,12 @@ const KendaraAuth = (function () {
   function loginAsGuest() {
     const guestUser = {
       id: "usr-guest-001",
-      email: "budi.pengendara@gmail.com",
-      name: "Budi Pengendara",
+      email: "demo@kendaratrack.app",
+      name: "Pengendara Demo (Tamu)",
       avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&q=80",
       token: "guest-token-session",
-      provider: "guest"
+      provider: "guest",
+      is_demo: true
     };
     setUser(guestUser);
     return guestUser;
