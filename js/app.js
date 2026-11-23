@@ -1074,6 +1074,28 @@ const App = (function () {
   }
 
   /**
+   * Copy Cross-Device Sync Link for Mobile
+   */
+  function copySyncLinkForMobile() {
+    const config = KendaraAPI.getConfig();
+    if (config.provider === "LOCAL_DEMO") {
+      showToast("Pilih provider Supabase dan simpan pengaturan terlebih dahulu.", "info");
+      return;
+    }
+    if (!config.supabaseUrl && !config.gasUrl) {
+      showToast("Isi URL dan Key database terlebih dahulu!", "error");
+      return;
+    }
+    const syncUrl = KendaraAPI.generateSyncUrl();
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(syncUrl);
+      showToast("Tautan sinkronisasi disalin! Kirim ke WhatsApp dan buka di HP Anda.", "success");
+    } else {
+      prompt("Salin tautan sinkronisasi ini dan buka di HP Anda:", syncUrl);
+    }
+  }
+
+  /**
    * Export CSV
    */
   async function exportDataCSV() {
@@ -2089,6 +2111,7 @@ const App = (function () {
     showToast,
     saveDatabaseSettings,
     testDatabaseConnection,
+    copySyncLinkForMobile,
     toggleDbProviderInputs,
     toggleKeyVisibility,
     openActiveVehiclePhoto,

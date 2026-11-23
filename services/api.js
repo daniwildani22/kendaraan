@@ -16,16 +16,49 @@ const KendaraAPI = (function () {
     ACTIVE_VEHICLE: "kendaratrack_active_vehicle_id"
   };
 
-  // Default configuration
+  const globalDefaults = (typeof window !== "undefined" && window.APP_CONFIG) || {};
+
+  // Default configuration (initialized from global APP_CONFIG or local defaults)
   let config = {
-    provider: "LOCAL_DEMO", // 'LOCAL_DEMO' | 'GAS' | 'SUPABASE'
-    gasUrl: "",
-    supabaseUrl: "",
-    supabaseAnonKey: ""
+    provider: globalDefaults.DEFAULT_PROVIDER || "LOCAL_DEMO",
+    gasUrl: globalDefaults.DEFAULT_GAS_URL || "",
+    supabaseUrl: globalDefaults.DEFAULT_SUPABASE_URL || "",
+    supabaseAnonKey: globalDefaults.DEFAULT_SUPABASE_KEY || ""
   };
+
+  // Check URL query parameters for cross-device automatic sync
+  // e.g. opening: https://kendaratrack.vercel.app/?sync_provider=SUPABASE&url=...&key=...
+  function checkUrlSyncParams() {
+    try {
+      if (typeof window === "undefined" || !window.location.search) return false;
+      const params = new URLSearchParams(window.location.search);
+      if (params.has("sync_provider") || params.has("sync_db")) {
+        const syncProvider = (params.get("sync_provider") || params.get("sync_db") || "SUPABASE").toUpperCase();
+        const syncUrl = params.get("url") || params.get("supabase_url") || "";
+        const syncKey = params.get("key") || params.get("supabase_key") || "";
+        const syncGas = params.get("gas") || params.get("gas_url") || "";
+
+        if (syncUrl) config.supabaseUrl = decodeURIComponent(syncUrl).trim();
+        if (syncKey) config.supabaseAnonKey = decodeURIComponent(syncKey).trim();
+        if (syncGas) config.gasUrl = decodeURIComponent(syncGas).trim();
+        config.provider = syncProvider;
+
+        localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
+
+        // Clean up URL parameters to keep address bar clean
+        const cleanUrl = window.location.origin + window.location.pathname;
+        window.history.replaceState({}, document.title, cleanUrl);
+        return true;
+      }
+    } catch (e) {
+      console.warn("URL sync check warning:", e);
+    }
+    return false;
+  }
 
   // Load saved config if exists
   function loadConfig() {
+    checkUrlSyncParams();
     try {
       const saved = localStorage.getItem(CONFIG_KEY);
       if (saved) {
@@ -33,6 +66,22 @@ const KendaraAPI = (function () {
       }
     } catch (e) {
       console.error("Failed to load config from localStorage", e);
+    }
+
+    // Apply global defaults if values are missing in current config
+    if (globalDefaults.DEFAULT_SUPABASE_URL && !config.supabaseUrl) {
+      config.supabaseUrl = globalDefaults.DEFAULT_SUPABASE_URL;
+    }
+    if (globalDefaults.DEFAULT_SUPABASE_KEY && !config.supabaseAnonKey) {
+      config.supabaseAnonKey = globalDefaults.DEFAULT_SUPABASE_KEY;
+    }
+    if (globalDefaults.DEFAULT_GAS_URL && !config.gasUrl) {
+      config.gasUrl = globalDefaults.DEFAULT_GAS_URL;
+    }
+    if (globalDefaults.DEFAULT_PROVIDER === "SUPABASE" && config.supabaseUrl && config.supabaseAnonKey) {
+      if (!localStorage.getItem(CONFIG_KEY)) {
+        config.provider = "SUPABASE";
+      }
     }
   }
 
@@ -840,6 +889,17 @@ const KendaraAPI = (function () {
           throw new Error(`Supabase Error (${response.status}): ${errMsg}`);
         }
       }
+    },
+
+    // Generate Cross-Device Sync URL
+    generateSyncUrl() {
+      const origin = window.location.origin + window.location.pathname;
+      if (config.provider === "SUPABASE") {
+        return `${origin}?sync_provider=SUPABASE&url=${encodeURIComponent(config.supabaseUrl)}&key=${encodeURIComponent(config.supabaseAnonKey)}`;
+      } else if (config.provider === "GAS") {
+        return `${origin}?sync_provider=GAS&gas=${encodeURIComponent(config.gasUrl)}`;
+      }
+      return origin;
     },
 
     // Export Data as CSV

@@ -9,6 +9,7 @@ const ASSETS_TO_CACHE = [
   "./index.html",
   "./manifest.json",
   "./css/styles.css",
+  "./js/config.js",
   "./js/seedData.js",
   "./js/utils.js",
   "./services/api.js",
