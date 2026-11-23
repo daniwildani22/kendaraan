@@ -63,7 +63,7 @@ const AnalyticsCharts = (function () {
           {
             label: "Pengeluaran",
             data: expensesData,
-            backgroundColor: "#0F5132",
+            backgroundColor: "#0B4F9C",
             borderRadius: 8,
             borderSkipped: false,
             barPercentage: 0.6,
@@ -152,6 +152,11 @@ const AnalyticsCharts = (function () {
       cicilan: "#FB923C",
       parkir_tol: "#64748B",
       cuci: "#14B8A6",
+      pendapatan: "#10B981",
+      sewa: "#06B6D4",
+      reimbursement: "#0EA5E9",
+      penjualan_part: "#A855F7",
+      pemasukan_lain: "#059669",
       lainnya: "#94A3B8"
     };
 

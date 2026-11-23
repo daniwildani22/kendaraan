@@ -18,6 +18,17 @@ const App = (function () {
     editingTransactionId: null
   };
 
+  function updateGreetingText() {
+    const greetingEl = document.getElementById("header-greeting-time");
+    if (greetingEl) {
+      const hour = new Date().getHours();
+      if (hour >= 4 && hour < 11) greetingEl.innerText = "Good Morning!";
+      else if (hour >= 11 && hour < 15) greetingEl.innerText = "Good Afternoon!";
+      else if (hour >= 15 && hour < 19) greetingEl.innerText = "Good Evening!";
+      else greetingEl.innerText = "Good Night!";
+    }
+  }
+
   /**
    * Boot the application
    */
@@ -30,6 +41,7 @@ const App = (function () {
     }
 
     state.activeVehicleId = KendaraAPI.getActiveVehicleId();
+    updateGreetingText();
     await refreshData();
     setupEventListeners();
     switchTab("home");
@@ -83,17 +95,17 @@ const App = (function () {
       const label = btn.querySelector(".nav-label");
 
       if (target === tabName) {
-        btn.classList.add("text-emerald-800", "font-bold");
+        btn.classList.add("text-[#0B4F9C]", "font-bold");
         btn.classList.remove("text-slate-400", "font-normal");
         if (iconWrap) {
-          iconWrap.classList.add("bg-emerald-50", "text-emerald-700");
+          iconWrap.classList.add("bg-blue-50", "text-[#0B4F9C]");
           iconWrap.classList.remove("text-slate-400");
         }
       } else {
-        btn.classList.remove("text-emerald-800", "font-bold");
+        btn.classList.remove("text-[#0B4F9C]", "font-bold");
         btn.classList.add("text-slate-400", "font-normal");
         if (iconWrap) {
-          iconWrap.classList.remove("bg-emerald-50", "text-emerald-700");
+          iconWrap.classList.remove("bg-blue-50", "text-[#0B4F9C]");
           iconWrap.classList.add("text-slate-400");
         }
       }
@@ -147,7 +159,7 @@ const App = (function () {
     if (activeVehicle && activeVehicle.photo_vehicle) {
       avatarHtml = `
         <button onclick="App.openPhotoLightbox('${activeVehicle.photo_vehicle}', '${activeVehicle.name}', 'vehicle', '${activeVehicle.id}', 'photo_vehicle')"
-          title="Lihat Foto Kendaraan" class="w-7 h-7 rounded-full overflow-hidden border border-emerald-500 shadow-xs flex-shrink-0 active:scale-95 transition-transform hover:ring-2 hover:ring-emerald-300">
+          title="Lihat Foto Kendaraan" class="w-6 h-6 rounded-full overflow-hidden border border-[#0B4F9C] shadow-2xs flex-shrink-0 active:scale-95 transition-transform hover:ring-2 hover:ring-blue-300">
           <img src="${activeVehicle.photo_vehicle}" alt="${activeVehicle.name}" class="w-full h-full object-cover">
         </button>
       `;
@@ -156,22 +168,29 @@ const App = (function () {
     let selectHtml = `
       <div class="flex items-center gap-1.5">
         ${avatarHtml}
-        <select id="vehicle-dropdown-select" onchange="App.switchVehicle(this.value)"
-          class="bg-white/90 backdrop-blur-sm border border-slate-200 text-slate-800 font-semibold text-xs py-1.5 px-3 rounded-full shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 max-w-[190px] truncate">
+        <div class="relative flex items-center">
+          <select id="vehicle-dropdown-select" onchange="App.switchVehicle(this.value)"
+            class="appearance-none bg-transparent text-slate-900 font-extrabold text-sm py-0.5 pr-4 pl-0 focus:outline-none cursor-pointer max-w-[200px] truncate leading-tight">
     `;
 
     state.vehicles.forEach((v) => {
       const isSelected = v.id === state.activeVehicleId ? "selected" : "";
       const icon = v.type === "mobil" ? "🚗" : "🛵";
       selectHtml += `
-        <option value="${v.id}" ${isSelected}>
-          ${icon} ${v.name} • ${v.plate_number}
+        <option value="${v.id}" ${isSelected} class="text-xs font-semibold text-slate-800">
+          ${v.name} • ${v.plate_number}
         </option>
       `;
     });
 
-    selectHtml += `</select></div>`;
+    selectHtml += `
+          </select>
+          <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-600 absolute right-0 pointer-events-none"></i>
+        </div>
+      </div>
+    `;
     container.innerHTML = selectHtml;
+    if (window.lucide) lucide.createIcons();
   }
 
   /**
@@ -292,7 +311,7 @@ const App = (function () {
               <p class="text-[11px] text-slate-400">Tambahkan foto fisik kendaraan Anda</p>
             </div>
           </div>
-          <label class="px-3 py-2 rounded-xl bg-gradient-to-r from-[#0F5132] to-[#198754] text-white text-xs font-bold cursor-pointer shadow-sm active:scale-95 transition-all flex items-center gap-1.5 flex-shrink-0">
+          <label class="px-3 py-2 rounded-xl bg-gradient-to-r from-[#0A3981] to-[#0B4F9C] text-white text-xs font-bold cursor-pointer shadow-sm active:scale-95 transition-all flex items-center gap-1.5 flex-shrink-0">
             <i data-lucide="upload" class="w-3.5 h-3.5"></i>
             <span>Upload Foto</span>
             <input type="file" accept="image/*" class="hidden" onchange="App.handleVehiclePhotoUpload('photo_vehicle', event)">
@@ -649,7 +668,7 @@ const App = (function () {
     state.txFilterType = type;
     document.querySelectorAll(".tx-filter-pill").forEach((pill) => {
       if (pill.getAttribute("data-type") === type) {
-        pill.className = "tx-filter-pill px-4 py-1.5 rounded-full text-xs font-bold bg-[#0F5132] text-white shadow-sm";
+        pill.className = "tx-filter-pill px-4 py-1.5 rounded-full text-xs font-bold bg-[#0B4F9C] text-white shadow-sm";
       } else {
         pill.className = "tx-filter-pill px-4 py-1.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600 hover:bg-slate-200";
       }
@@ -864,7 +883,7 @@ const App = (function () {
             </div>
             <p class="text-xs font-bold text-slate-800 leading-tight">${doc.title}</p>
             <p class="text-[10px] text-slate-400 mt-0.5 mb-2">${doc.desc}</p>
-            <label class="px-2.5 py-1 rounded-lg bg-gradient-to-r from-[#0F5132] to-[#198754] text-white text-[10px] font-bold cursor-pointer shadow-xs active:scale-95 flex items-center gap-1">
+            <label class="px-2.5 py-1 rounded-lg bg-gradient-to-r from-[#0A3981] to-[#0B4F9C] text-white text-[10px] font-bold cursor-pointer shadow-xs active:scale-95 flex items-center gap-1">
               <i data-lucide="upload" class="w-3 h-3"></i> Upload
               <input type="file" accept="image/*" class="hidden" onchange="App.handleVehiclePhotoUpload('${doc.key}', event)">
             </label>
@@ -1152,6 +1171,44 @@ const App = (function () {
     showToast(`Odometer diperbarui ke ${Utils.formatKm(newKm)}`, "success");
   }
 
+  // Category definition groups for Pengeluaran & Pemasukan
+  const EXPENSE_CATEGORY_GROUPS = [
+    {
+      group: "⛽ Operasional & Perjalanan",
+      options: [
+        { value: "bbm", label: "Bahan Bakar (BBM)" },
+        { value: "parkir_tol", label: "Tol & Parkir" },
+        { value: "cuci", label: "Cuci & Perawatan Kendaraan" }
+      ]
+    },
+    {
+      group: "📋 Pajak & Tagihan",
+      options: [
+        { value: "pajak", label: "Pajak STNK & SIM" },
+        { value: "cicilan", label: "Cicilan / Tagihan Kendaraan" }
+      ]
+    },
+    {
+      group: "📦 Lainnya",
+      options: [
+        { value: "lainnya", label: "Pengeluaran Lain-lain" }
+      ]
+    }
+  ];
+
+  const INCOME_CATEGORY_GROUPS = [
+    {
+      group: "💵 Sumber Pemasukan",
+      options: [
+        { value: "pendapatan", label: "Pendapatan Operasional / Narik (Ojol / Muatan)" },
+        { value: "sewa", label: "Sewa / Rental Kendaraan" },
+        { value: "reimbursement", label: "Klaim / Reimbursement Kantor" },
+        { value: "penjualan_part", label: "Penjualan Part / Aksesoris Bekas" },
+        { value: "pemasukan_lain", label: "Pemasukan Lain-lain" }
+      ]
+    }
+  ];
+
   // Add / Edit Transaction Modal
   function openAddTransactionModal(presetCategory = null) {
     state.editingTransactionId = null;
@@ -1162,14 +1219,7 @@ const App = (function () {
     document.getElementById("tx-form-date").value = new Date().toISOString().split("T")[0];
     document.getElementById("tx-form-odometer").value = vehicle ? vehicle.current_odometer : "";
 
-    if (presetCategory) {
-      document.getElementById("tx-form-category").value = presetCategory;
-      toggleFuelFields(presetCategory);
-    } else {
-      toggleFuelFields("bbm");
-    }
-
-    setTransactionTypeInForm("pengeluaran");
+    setTransactionTypeInForm("pengeluaran", presetCategory || "bbm");
     openModal("modal-transaction");
   }
 
@@ -1180,15 +1230,13 @@ const App = (function () {
     state.editingTransactionId = id;
     document.getElementById("tx-modal-title").innerText = "Edit Transaksi";
 
-    setTransactionTypeInForm(tx.type);
-    document.getElementById("tx-form-category").value = tx.category;
+    setTransactionTypeInForm(tx.type, tx.category);
     document.getElementById("tx-form-amount").value = tx.amount;
     document.getElementById("tx-form-date").value = tx.date;
     document.getElementById("tx-form-odometer").value = tx.odometer || "";
     document.getElementById("tx-form-notes").value = tx.notes || "";
     document.getElementById("tx-form-bengkel").value = tx.bengkel_name || "";
 
-    toggleFuelFields(tx.category);
     if (tx.category === "bbm") {
       document.getElementById("tx-form-fuel-liters").value = tx.fuel_liters || "";
       document.getElementById("tx-form-fuel-type").value = tx.fuel_type || "Pertamax";
@@ -1197,66 +1245,79 @@ const App = (function () {
     openModal("modal-transaction");
   }
 
-  function setTransactionTypeInForm(type) {
+  function populateTransactionCategories(type, selectedCategory) {
+    const catSelect = document.getElementById("tx-form-category");
+    if (!catSelect) return;
+
+    const isExpense = type === "pengeluaran";
+    const groups = isExpense ? EXPENSE_CATEGORY_GROUPS : INCOME_CATEGORY_GROUPS;
+
+    let html = "";
+    groups.forEach((g) => {
+      html += `<optgroup label="${g.group}">`;
+      g.options.forEach((opt) => {
+        html += `<option value="${opt.value}">${opt.label}</option>`;
+      });
+      html += `</optgroup>`;
+    });
+
+    // If editing an existing transaction recorded from quick shortcuts (oli, sparepart, servis)
+    if (selectedCategory && !groups.some((g) => g.options.some((o) => o.value === selectedCategory))) {
+      let legacyLabel = selectedCategory;
+      if (selectedCategory === "ganti_oli") legacyLabel = "Ganti Oli (Dari Pintasan Beranda)";
+      else if (selectedCategory === "sparepart") legacyLabel = "Ganti Sparepart (Dari Pintasan Beranda)";
+      else if (selectedCategory === "servis") legacyLabel = "Servis Berkala (Dari Jadwal)";
+      html += `<optgroup label="🔧 Perawatan Tercatat Khusus"><option value="${selectedCategory}">${legacyLabel}</option></optgroup>`;
+    }
+
+    catSelect.innerHTML = html;
+
+    if (selectedCategory && catSelect.querySelector(`option[value="${selectedCategory}"]`)) {
+      catSelect.value = selectedCategory;
+    } else {
+      catSelect.value = isExpense ? "bbm" : "pendapatan";
+    }
+
+    handleTransactionCategoryChange(catSelect.value);
+  }
+
+  function setTransactionTypeInForm(type, selectedCategory = null) {
     document.getElementById("tx-form-type").value = type;
     const btnOut = document.getElementById("tx-type-btn-out");
     const btnIn = document.getElementById("tx-type-btn-in");
+    const catLabel = document.getElementById("tx-form-category-label");
+    const hintBox = document.getElementById("tx-maintenance-hint");
+    const bengkelLabel = document.getElementById("tx-form-bengkel-label");
+    const bengkelInput = document.getElementById("tx-form-bengkel");
 
     if (type === "pengeluaran") {
-      btnOut.className = "flex-1 py-2 text-xs font-bold rounded-xl bg-gradient-to-r from-[#0F5132] to-[#198754] text-white shadow-sm transition-all";
+      btnOut.className = "flex-1 py-2 text-xs font-bold rounded-xl bg-gradient-to-r from-[#0A3981] to-[#0B4F9C] text-white shadow-sm transition-all";
       btnIn.className = "flex-1 py-2 text-xs font-medium rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all";
+      if (catLabel) catLabel.innerText = "Kategori Pengeluaran";
+      if (hintBox) hintBox.classList.remove("hidden");
+      if (bengkelLabel) bengkelLabel.innerText = "Nama Toko / Bengkel / SPBU (Opsional)";
+      if (bengkelInput) bengkelInput.placeholder = "Contoh: SPBU Pertamina / AHASS";
     } else {
       btnIn.className = "flex-1 py-2 text-xs font-bold rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-sm transition-all";
       btnOut.className = "flex-1 py-2 text-xs font-medium rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all";
+      if (catLabel) catLabel.innerText = "Kategori Pemasukan";
+      if (hintBox) hintBox.classList.add("hidden");
+      if (bengkelLabel) bengkelLabel.innerText = "Sumber Pemasukan / Klien / Penyetor (Opsional)";
+      if (bengkelInput) bengkelInput.placeholder = "Contoh: Penghasilan Grab / Konsumen Sewa";
     }
-  }
 
-  function toggleFuelFields(category) {
-    const fuelContainer = document.getElementById("tx-fuel-details-section");
-    if (fuelContainer) {
-      fuelContainer.classList.toggle("hidden", category !== "bbm");
-    }
-    toggleCategoryTip(category);
+    populateTransactionCategories(type, selectedCategory);
   }
 
   function handleTransactionCategoryChange(category) {
     toggleFuelFields(category);
   }
 
-  function toggleCategoryTip(category) {
-    const tipBox = document.getElementById("tx-category-tip");
-    if (!tipBox) return;
-
-    if (category === "ganti_oli") {
-      tipBox.classList.remove("hidden");
-      const titleEl = document.getElementById("tx-tip-title");
-      const descEl = document.getElementById("tx-tip-desc");
-      const btnTextEl = document.getElementById("tx-tip-btn-text");
-      const btnEl = document.getElementById("tx-tip-btn");
-
-      if (titleEl) titleEl.innerText = "💡 Rekomendasi: Gunakan Formulir Ganti Oli";
-      if (descEl) {
-        descEl.innerHTML = "Opsi ini hanya mencatat <b>pengeluaran uang</b>. Agar status kesehatan oli, odometer, dan jadwal servis di Beranda otomatis ter-update, gunakan formulir khusus ganti oli.";
-      }
-      if (btnTextEl) btnTextEl.innerText = "Pindah ke Formulir Ganti Oli ➜";
-      if (btnEl) btnEl.setAttribute("onclick", "App.switchToDedicatedModal('oli')");
-      if (window.lucide) lucide.createIcons();
-    } else if (category === "sparepart") {
-      tipBox.classList.remove("hidden");
-      const titleEl = document.getElementById("tx-tip-title");
-      const descEl = document.getElementById("tx-tip-desc");
-      const btnTextEl = document.getElementById("tx-tip-btn-text");
-      const btnEl = document.getElementById("tx-tip-btn");
-
-      if (titleEl) titleEl.innerText = "💡 Rekomendasi: Gunakan Formulir Ganti Sparepart";
-      if (descEl) {
-        descEl.innerHTML = "Opsi ini hanya mencatat <b>pengeluaran uang</b>. Agar nama sparepart, garansi pemakaian, dan titik bengkel di Google Maps tercatat detail, gunakan formulir khusus sparepart.";
-      }
-      if (btnTextEl) btnTextEl.innerText = "Pindah ke Formulir Sparepart ➜";
-      if (btnEl) btnEl.setAttribute("onclick", "App.switchToDedicatedModal('sparepart')");
-      if (window.lucide) lucide.createIcons();
-    } else {
-      tipBox.classList.add("hidden");
+  function toggleFuelFields(category) {
+    const fuelContainer = document.getElementById("tx-fuel-details-section");
+    const currentType = document.getElementById("tx-form-type") ? document.getElementById("tx-form-type").value : "pengeluaran";
+    if (fuelContainer) {
+      fuelContainer.classList.toggle("hidden", currentType !== "pengeluaran" || category !== "bbm");
     }
   }
 
@@ -1286,6 +1347,11 @@ const App = (function () {
         const nameEl = document.getElementById("part-form-part-name");
         if (nameEl) nameEl.value = currentNotes;
       }
+    } else if (type === "jadwal") {
+      openAddScheduleModal();
+      if (currentAmount) document.getElementById("sch-form-cost").value = currentAmount;
+      if (currentDate) document.getElementById("sch-form-target-date").value = currentDate;
+      if (currentNotes) document.getElementById("sch-form-title").value = currentNotes;
     }
   }
 
@@ -2164,9 +2230,9 @@ const App = (function () {
     openAddTransactionModal,
     openEditTransactionModal,
     setTransactionTypeInForm,
+    populateTransactionCategories,
     toggleFuelFields,
     handleTransactionCategoryChange,
-    toggleCategoryTip,
     switchToDedicatedModal,
     submitTransactionForm,
     deleteTransactionConfirm,

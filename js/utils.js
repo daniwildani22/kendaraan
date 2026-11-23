@@ -271,8 +271,36 @@ const Utils = {
         badge: "bg-emerald-100 text-emerald-800",
         type: "pemasukan"
       },
+      sewa: {
+        label: "Sewa / Rental Kendaraan",
+        icon: "key",
+        bg: "bg-teal-50 text-teal-600 border-teal-100",
+        badge: "bg-teal-100 text-teal-800",
+        type: "pemasukan"
+      },
+      reimbursement: {
+        label: "Klaim / Reimburse",
+        icon: "shield-check",
+        bg: "bg-sky-50 text-sky-600 border-sky-100",
+        badge: "bg-sky-100 text-sky-800",
+        type: "pemasukan"
+      },
+      penjualan_part: {
+        label: "Jual Part / Aksesoris",
+        icon: "package",
+        bg: "bg-violet-50 text-violet-600 border-violet-100",
+        badge: "bg-violet-100 text-violet-800",
+        type: "pemasukan"
+      },
+      pemasukan_lain: {
+        label: "Pemasukan Lainnya",
+        icon: "plus-circle",
+        bg: "bg-emerald-50 text-emerald-600 border-emerald-100",
+        badge: "bg-emerald-100 text-emerald-800",
+        type: "pemasukan"
+      },
       lainnya: {
-        label: "Lainnya",
+        label: "Pengeluaran Lainnya",
         icon: "more-horizontal",
         bg: "bg-gray-100 text-gray-700 border-gray-200",
         badge: "bg-gray-200 text-gray-800",

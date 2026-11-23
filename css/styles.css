@@ -1,14 +1,17 @@
 /* =========================================================================
-   KENDARATRACK - FINORA EMERALD UI DESIGN SYSTEM STYLES
+   KENDARATRACK - ROYAL BLUE & ORANGE UI DESIGN SYSTEM STYLES
+   Inspired by Modern Professional Service Apps (AdBrovez Reference)
    ========================================================================= */
 
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
 
 :root {
   --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --color-emerald-deep: #0F5132;
-  --color-emerald-mid: #146C43;
-  --color-emerald-forest: #198754;
+  --color-brand-primary: #0B4F9C;
+  --color-brand-dark: #0A3981;
+  --color-brand-light: #1565C0;
+  --color-brand-accent: #F97316;
+  --color-brand-amber: #F59E0B;
   --color-bg-soft: #F8FAFC;
   --color-surface: #FFFFFF;
 }
@@ -43,49 +46,62 @@ body {
   background: #94A3B8;
 }
 
-/* Finora Emerald Gradient Utility */
+/* Royal Blue Gradient Utilities */
+.bg-brand-royal {
+  background: linear-gradient(135deg, #0A3981 0%, #0B4F9C 50%, #1565C0 100%);
+}
+
+.bg-brand-royal-subtle {
+  background: linear-gradient(135deg, rgba(11, 79, 156, 0.08) 0%, rgba(21, 101, 192, 0.04) 100%);
+}
+
+/* Backward compatibility for existing utility classes */
 .bg-finora-emerald {
-  background: linear-gradient(135deg, #0F5132 0%, #146C43 50%, #198754 100%);
+  background: linear-gradient(135deg, #0A3981 0%, #0B4F9C 50%, #1565C0 100%);
 }
 
 .bg-finora-emerald-subtle {
-  background: linear-gradient(135deg, rgba(15, 81, 50, 0.08) 0%, rgba(25, 135, 84, 0.04) 100%);
+  background: linear-gradient(135deg, rgba(11, 79, 156, 0.08) 0%, rgba(21, 101, 192, 0.04) 100%);
 }
 
-/* Card Elevations matching Finora UI */
-.finora-card {
+/* Modern Card Elevations */
+.brand-card, .finora-card {
   background: #FFFFFF;
-  border: 1px solid #E2E8F0;
+  border: 1px solid #F1F5F9;
   border-radius: 1.25rem; /* 20px */
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.02), 0 1px 2px -1px rgba(0, 0, 0, 0.02);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.03), 0 1px 2px -1px rgba(0, 0, 0, 0.02);
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.finora-card:hover {
-  box-shadow: 0 4px 12px 0 rgba(0, 0, 0, 0.05);
+.brand-card:hover, .finora-card:hover {
+  box-shadow: 0 4px 14px 0 rgba(11, 79, 156, 0.08);
 }
 
 /* Glassmorphism & Translucent Bars */
 .glass-nav {
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-top: 1px solid rgba(226, 232, 240, 0.8);
 }
 
-/* Buttons */
-.finora-btn-primary {
-  background: linear-gradient(135deg, #0F5132 0%, #198754 100%);
+/* Primary Action Buttons */
+.brand-btn-primary, .finora-btn-primary {
+  background: #0B4F9C;
   color: #FFFFFF;
-  font-weight: 600;
-  border-radius: 0.875rem; /* 14px */
+  font-weight: 700;
+  border-radius: 1rem; /* 16px */
   transition: all 0.15s ease-in-out;
-  box-shadow: 0 2px 4px 0 rgba(15, 81, 50, 0.2);
+  box-shadow: 0 4px 14px 0 rgba(11, 79, 156, 0.25);
 }
 
-.finora-btn-primary:active {
+.brand-btn-primary:hover, .finora-btn-primary:hover {
+  background: #093E7A;
+}
+
+.brand-btn-primary:active, .finora-btn-primary:active {
   transform: scale(0.98);
-  opacity: 0.92;
+  opacity: 0.95;
 }
 
 /* Mobile Frame Container for Desktop Preview */
@@ -100,21 +116,21 @@ body {
 
 @media (min-width: 768px) {
   body {
-    background: #EDF2F7;
+    background: #EBF1F6;
     padding-top: 1.5rem;
     padding-bottom: 2rem;
   }
   .mobile-viewport-container {
-    border-radius: 2.25rem; /* 36px */
-    border: 8px solid #0F172A;
-    box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.1);
+    border-radius: 2.5rem; /* 40px */
+    border: 9px solid #1E293B;
+    box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1);
     overflow: hidden;
     min-height: 890px;
   }
   .glass-nav {
-    max-width: calc(440px - 16px);
-    border-bottom-left-radius: 1.75rem;
-    border-bottom-right-radius: 1.75rem;
+    max-width: calc(440px - 18px);
+    border-bottom-left-radius: 2rem;
+    border-bottom-right-radius: 2rem;
   }
 }
 

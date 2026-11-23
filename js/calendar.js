@@ -135,7 +135,7 @@ const Calendar = (function () {
 
       let btnClass = "text-slate-700 hover:bg-slate-100";
       if (isSelected) {
-        btnClass = "bg-gradient-to-br from-[#0F5132] to-[#198754] text-white shadow-md font-semibold";
+        btnClass = "bg-gradient-to-br from-[#0A3981] to-[#0B4F9C] text-white shadow-md font-semibold";
       } else if (isToday) {
         btnClass = "border border-emerald-500 text-emerald-800 font-bold bg-emerald-50/50";
       }
@@ -239,7 +239,7 @@ const Calendar = (function () {
                   !isDone
                     ? `
                   <button onclick="window.App.openPayScheduleModal('${item.id}')"
-                    class="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#0F5132] to-[#198754] text-white font-medium hover:opacity-95 shadow-sm flex items-center gap-1.5">
+                    class="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#0A3981] to-[#0B4F9C] text-white font-medium hover:opacity-95 shadow-sm flex items-center gap-1.5">
                     <i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i>
                     <span>Selesai & Bayar</span>
                   </button>
