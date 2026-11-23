@@ -1216,6 +1216,77 @@ const App = (function () {
     if (fuelContainer) {
       fuelContainer.classList.toggle("hidden", category !== "bbm");
     }
+    toggleCategoryTip(category);
+  }
+
+  function handleTransactionCategoryChange(category) {
+    toggleFuelFields(category);
+  }
+
+  function toggleCategoryTip(category) {
+    const tipBox = document.getElementById("tx-category-tip");
+    if (!tipBox) return;
+
+    if (category === "ganti_oli") {
+      tipBox.classList.remove("hidden");
+      const titleEl = document.getElementById("tx-tip-title");
+      const descEl = document.getElementById("tx-tip-desc");
+      const btnTextEl = document.getElementById("tx-tip-btn-text");
+      const btnEl = document.getElementById("tx-tip-btn");
+
+      if (titleEl) titleEl.innerText = "💡 Rekomendasi: Gunakan Formulir Ganti Oli";
+      if (descEl) {
+        descEl.innerHTML = "Opsi ini hanya mencatat <b>pengeluaran uang</b>. Agar status kesehatan oli, odometer, dan jadwal servis di Beranda otomatis ter-update, gunakan formulir khusus ganti oli.";
+      }
+      if (btnTextEl) btnTextEl.innerText = "Pindah ke Formulir Ganti Oli ➜";
+      if (btnEl) btnEl.setAttribute("onclick", "App.switchToDedicatedModal('oli')");
+      if (window.lucide) lucide.createIcons();
+    } else if (category === "sparepart") {
+      tipBox.classList.remove("hidden");
+      const titleEl = document.getElementById("tx-tip-title");
+      const descEl = document.getElementById("tx-tip-desc");
+      const btnTextEl = document.getElementById("tx-tip-btn-text");
+      const btnEl = document.getElementById("tx-tip-btn");
+
+      if (titleEl) titleEl.innerText = "💡 Rekomendasi: Gunakan Formulir Ganti Sparepart";
+      if (descEl) {
+        descEl.innerHTML = "Opsi ini hanya mencatat <b>pengeluaran uang</b>. Agar nama sparepart, garansi pemakaian, dan titik bengkel di Google Maps tercatat detail, gunakan formulir khusus sparepart.";
+      }
+      if (btnTextEl) btnTextEl.innerText = "Pindah ke Formulir Sparepart ➜";
+      if (btnEl) btnEl.setAttribute("onclick", "App.switchToDedicatedModal('sparepart')");
+      if (window.lucide) lucide.createIcons();
+    } else {
+      tipBox.classList.add("hidden");
+    }
+  }
+
+  function switchToDedicatedModal(type) {
+    const currentAmount = document.getElementById("tx-form-amount") ? document.getElementById("tx-form-amount").value : "";
+    const currentDate = document.getElementById("tx-form-date") ? document.getElementById("tx-form-date").value : "";
+    const currentOdo = document.getElementById("tx-form-odometer") ? document.getElementById("tx-form-odometer").value : "";
+    const currentBengkel = document.getElementById("tx-form-bengkel") ? document.getElementById("tx-form-bengkel").value : "";
+    const currentNotes = document.getElementById("tx-form-notes") ? document.getElementById("tx-form-notes").value : "";
+
+    closeModal("modal-transaction");
+
+    if (type === "oli") {
+      openQuickOilModal();
+      if (currentAmount) document.getElementById("oil-form-cost").value = currentAmount;
+      if (currentDate) document.getElementById("oil-form-date").value = currentDate;
+      if (currentOdo) document.getElementById("oil-form-odometer").value = currentOdo;
+      if (currentBengkel) document.getElementById("oil-form-workshop").value = currentBengkel;
+      if (currentNotes) document.getElementById("oil-form-notes").value = currentNotes;
+    } else if (type === "sparepart") {
+      openQuickSparepartModal();
+      if (currentAmount) document.getElementById("part-form-cost").value = currentAmount;
+      if (currentDate) document.getElementById("part-form-date").value = currentDate;
+      if (currentOdo) document.getElementById("part-form-odometer").value = currentOdo;
+      if (currentBengkel) document.getElementById("part-form-workshop").value = currentBengkel;
+      if (currentNotes) {
+        const nameEl = document.getElementById("part-form-part-name");
+        if (nameEl) nameEl.value = currentNotes;
+      }
+    }
   }
 
   async function submitTransactionForm(e) {
@@ -2094,6 +2165,9 @@ const App = (function () {
     openEditTransactionModal,
     setTransactionTypeInForm,
     toggleFuelFields,
+    handleTransactionCategoryChange,
+    toggleCategoryTip,
+    switchToDedicatedModal,
     submitTransactionForm,
     deleteTransactionConfirm,
     openQuickOilModal,

@@ -921,26 +921,54 @@
 
         <!-- Category Dropdown -->
         <div>
-          <label class="text-xs font-semibold text-slate-700">Kategori</label>
-          <select id="tx-form-category" onchange="App.toggleFuelFields(this.value)" required
+          <label class="text-xs font-semibold text-slate-700">Kategori Transaksi</label>
+          <select id="tx-form-category" onchange="App.handleTransactionCategoryChange(this.value)" required
             class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200 text-slate-800 font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
-            <option value="bbm">Bahan Bakar (BBM)</option>
-            <option value="ganti_oli">Ganti Oli</option>
-            <option value="sparepart">Ganti Sparepart</option>
-            <option value="servis">Servis Bengkel</option>
-            <option value="pajak">Pajak & SIM</option>
-            <option value="cicilan">Cicilan / Tagihan</option>
-            <option value="parkir_tol">Tol & Parkir</option>
-            <option value="cuci">Cuci Kendaraan</option>
-            <option value="pendapatan">Pendapatan Kendaraan</option>
-            <option value="lainnya">Lainnya</option>
+            <optgroup label="⛽ Operasional & Perjalanan">
+              <option value="bbm">Bahan Bakar (BBM)</option>
+              <option value="parkir_tol">Tol & Parkir</option>
+              <option value="cuci">Cuci Kendaraan</option>
+            </optgroup>
+            <optgroup label="📋 Pajak & Tagihan">
+              <option value="pajak">Pajak STNK & SIM</option>
+              <option value="cicilan">Cicilan / Tagihan Kendaraan</option>
+            </optgroup>
+            <optgroup label="🔧 Servis & Bengkel (Catatan Biaya Kas)">
+              <option value="servis">Servis Berkala / Tune-up Bengkel</option>
+              <option value="ganti_oli">Ganti Oli (Biaya Kas Saja)</option>
+              <option value="sparepart">Ganti Sparepart (Biaya Kas Saja)</option>
+            </optgroup>
+            <optgroup label="💵 Lainnya">
+              <option value="pendapatan">Pendapatan Kendaraan (Pemasukan)</option>
+              <option value="lainnya">Pengeluaran Lain-lain</option>
+            </optgroup>
           </select>
+        </div>
+
+        <!-- Smart Helper Tip when Ganti Oli / Sparepart is selected -->
+        <div id="tx-category-tip" class="hidden p-3 rounded-2xl bg-amber-50/90 border border-amber-200 text-amber-900 transition-all">
+          <div class="flex items-start gap-2.5">
+            <div class="w-7 h-7 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
+              <i data-lucide="info" class="w-4 h-4"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <h5 class="text-xs font-bold text-amber-900" id="tx-tip-title">Rekomendasi Pencatatan</h5>
+              <p class="text-[11px] text-amber-800 mt-0.5 leading-relaxed" id="tx-tip-desc">
+                Formulir ini hanya mencatat kas. Untuk data teknis lengkap, gunakan formulir khusus.
+              </p>
+              <button type="button" id="tx-tip-btn" onclick="App.switchToDedicatedModal('oli')"
+                class="mt-2.5 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-[11px] shadow-sm transition-all active:scale-95">
+                <i data-lucide="arrow-right-circle" class="w-3.5 h-3.5"></i>
+                <span id="tx-tip-btn-text">Pindah ke Formulir Khusus</span>
+              </button>
+            </div>
+          </div>
         </div>
 
         <!-- Amount Input -->
         <div>
           <label class="text-xs font-semibold text-slate-700">Nominal (Rp)</label>
-          <input type="number" id="tx-form-amount" placeholder="0" required min="1" step="1000"
+          <input type="number" id="tx-form-amount" placeholder="0" required min="0" step="any"
             class="w-full mt-1 p-3 text-base font-extrabold rounded-xl bg-slate-50 border border-slate-200 text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
         </div>
 
@@ -1050,7 +1078,7 @@
         <div class="grid grid-cols-2 gap-2">
           <div>
             <label class="text-xs font-semibold text-slate-700">Biaya Penggantian (Rp)</label>
-            <input type="number" id="oil-form-cost" placeholder="70000"
+            <input type="number" id="oil-form-cost" placeholder="70000" min="0" step="any"
               class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200 font-bold">
           </div>
           <div>
@@ -1144,7 +1172,7 @@
           </div>
           <div>
             <label class="text-xs font-semibold text-slate-700">Total Biaya (Rp)</label>
-            <input type="number" id="part-form-cost" placeholder="85000"
+            <input type="number" id="part-form-cost" placeholder="85000" min="0" step="any"
               class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200 font-bold">
           </div>
         </div>
@@ -1252,7 +1280,7 @@
           </div>
           <div>
             <label class="text-xs font-semibold text-slate-700">Estimasi Biaya (Rp)</label>
-            <input type="number" id="sch-form-cost" placeholder="Misal: 365000"
+            <input type="number" id="sch-form-cost" placeholder="Misal: 365000" min="0" step="any"
               class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200 font-bold">
           </div>
         </div>
@@ -1321,7 +1349,7 @@
 
         <div>
           <label class="text-xs font-semibold text-slate-700">Nominal Pembayaran Real (Rp)</label>
-          <input type="number" id="pay-sch-amount" required
+          <input type="number" id="pay-sch-amount" required min="0" step="any"
             class="w-full mt-1 p-3 text-lg font-black rounded-xl bg-slate-50 border border-slate-200 text-slate-900">
         </div>
 
