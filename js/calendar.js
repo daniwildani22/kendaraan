@@ -224,9 +224,19 @@ const Calendar = (function () {
                   </p>
                 </div>
               </div>
-              <span class="text-xs px-2.5 py-1 rounded-full whitespace-nowrap ${badgeClass}">
-                ${badgeText}
-              </span>
+              <div class="flex items-center gap-1 shrink-0">
+                <span class="text-xs px-2.5 py-1 rounded-full whitespace-nowrap ${badgeClass}">
+                  ${badgeText}
+                </span>
+                <button onclick="window.App.openEditScheduleModal('${item.id}')" title="Edit Jadwal"
+                  class="w-7 h-7 rounded-lg text-slate-400 hover:text-[#0B4F9C] hover:bg-blue-50 flex items-center justify-center transition-all active:scale-90">
+                  <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+                </button>
+                <button onclick="window.App.deleteScheduleConfirm('${item.id}')" title="Hapus Jadwal"
+                  class="w-7 h-7 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 flex items-center justify-center transition-all active:scale-90">
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
             </div>
 
             <div class="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">

@@ -1375,17 +1375,18 @@
     </div>
   </div>
 
-  <!-- Modal 5: Add Schedule / Reminder -->
+  <!-- Modal 5: Add / Edit Schedule / Reminder -->
   <div id="modal-add-schedule" class="modal-backdrop fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 hidden">
     <div class="w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl p-5 shadow-2xl animate-fade-in space-y-4">
       <div class="flex items-center justify-between pb-2 border-b border-slate-100">
-        <h3 class="text-sm font-bold text-slate-900">Tambah Jadwal Pengingat</h3>
+        <h3 id="sch-modal-title" class="text-sm font-bold text-slate-900">Tambah Jadwal Pengingat</h3>
         <button onclick="App.closeModal('modal-add-schedule')" class="text-slate-400 hover:text-slate-700">
           <i data-lucide="x" class="w-5 h-5"></i>
         </button>
       </div>
 
       <form id="sch-form" onsubmit="App.submitScheduleForm(event)" class="space-y-3">
+        <input type="hidden" id="sch-form-id">
         <div>
           <label class="text-xs font-semibold text-slate-700">Judul Pengingat</label>
           <input type="text" id="sch-form-title" placeholder="Misal: Pajak STNK Tahunan / Ganti Oli" required
@@ -1427,7 +1428,7 @@
         <!-- Recurring Option -->
         <div class="p-3 bg-slate-50 rounded-2xl border border-slate-100 space-y-2">
           <label class="flex items-center space-x-2 cursor-pointer">
-            <input type="checkbox" id="sch-form-recurring" checked class="w-4 h-4 text-emerald-600 rounded">
+            <input type="checkbox" id="sch-form-recurring" checked class="w-4 h-4 text-[#0B4F9C] rounded">
             <span class="text-xs font-bold text-slate-800">Berulang Otomatis (Recurring)</span>
           </label>
           <div class="flex items-center space-x-2 text-xs">
@@ -1454,8 +1455,9 @@
             Batal
           </button>
           <button type="submit"
-            class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-[#0A3981] to-[#0B4F9C] text-white text-xs font-bold shadow-md">
-            Simpan Jadwal
+            class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-[#0A3981] to-[#0B4F9C] text-white text-xs font-bold shadow-md hover:shadow-lg active:scale-98 transition-all flex items-center justify-center gap-1.5">
+            <i data-lucide="check" class="w-4 h-4"></i>
+            <span id="sch-modal-submit-text">Simpan Jadwal</span>
           </button>
         </div>
       </form>

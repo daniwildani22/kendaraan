@@ -15,7 +15,8 @@ const App = (function () {
     txFilterType: "semua", // 'semua' | 'pemasukan' | 'pengeluaran'
     txFilterCategory: "all",
     txSearchQuery: "",
-    editingTransactionId: null
+    editingTransactionId: null,
+    editingScheduleId: null
   };
 
   function updateGreetingText() {
@@ -1594,9 +1595,55 @@ const App = (function () {
     const vehicle = state.vehicles.find((v) => v.id === state.activeVehicleId);
     if (!vehicle) return;
 
+    state.editingScheduleId = null;
+    const titleEl = document.getElementById("sch-modal-title");
+    const submitTextEl = document.getElementById("sch-modal-submit-text");
+    if (titleEl) titleEl.innerText = "Tambah Jadwal Pengingat";
+    if (submitTextEl) submitTextEl.innerText = "Simpan Jadwal";
+
     document.getElementById("sch-form").reset();
+    document.getElementById("sch-form-id").value = "";
     document.getElementById("sch-form-date").value = new Date().toISOString().split("T")[0];
     openModal("modal-add-schedule");
+  }
+
+  function openEditScheduleModal(scheduleId) {
+    const sch = state.schedules.find((s) => s.id === scheduleId);
+    if (!sch) return;
+
+    state.editingScheduleId = scheduleId;
+    const titleEl = document.getElementById("sch-modal-title");
+    const submitTextEl = document.getElementById("sch-modal-submit-text");
+    if (titleEl) titleEl.innerText = "Edit Jadwal Pengingat";
+    if (submitTextEl) submitTextEl.innerText = "Perbarui Jadwal";
+
+    document.getElementById("sch-form-id").value = sch.id;
+    document.getElementById("sch-form-title").value = sch.title || "";
+    document.getElementById("sch-form-category").value = sch.category || "oli";
+    document.getElementById("sch-form-date").value = sch.due_date || "";
+    document.getElementById("sch-form-km").value = sch.target_odometer || "";
+    document.getElementById("sch-form-cost").value = sch.est_cost || "";
+    document.getElementById("sch-form-recurring").checked = Boolean(sch.is_recurring);
+    document.getElementById("sch-form-recur-months").value = sch.recurring_interval_months || 12;
+    document.getElementById("sch-form-notes").value = sch.notes || "";
+
+    openModal("modal-add-schedule");
+    if (window.lucide) lucide.createIcons();
+  }
+
+  async function deleteScheduleConfirm(scheduleId) {
+    const sch = state.schedules.find((s) => s.id === scheduleId);
+    const title = sch ? ` "${sch.title}"` : "";
+    if (confirm(`Apakah Anda yakin ingin menghapus jadwal pengingat${title}?`)) {
+      try {
+        await KendaraAPI.deleteSchedule(scheduleId);
+        await refreshData();
+        if (window.Calendar) Calendar.render();
+        showToast("Jadwal pengingat berhasil dihapus.", "info");
+      } catch (err) {
+        showToast("Gagal menghapus jadwal: " + err.message, "error");
+      }
+    }
   }
 
   async function submitScheduleForm(e) {
@@ -1616,21 +1663,39 @@ const App = (function () {
       return;
     }
 
-    await KendaraAPI.addSchedule({
-      vehicle_id: state.activeVehicleId,
-      title,
-      category,
-      due_date: dueDate,
-      target_odometer: targetKm ? Number(targetKm) : null,
-      est_cost: cost,
-      is_recurring: isRecurring,
-      recurring_interval_months: recurMonths,
-      notes
-    });
+    if (state.editingScheduleId) {
+      await KendaraAPI.updateSchedule({
+        id: state.editingScheduleId,
+        vehicle_id: state.activeVehicleId,
+        title,
+        category,
+        due_date: dueDate,
+        target_odometer: targetKm ? Number(targetKm) : null,
+        est_cost: cost,
+        is_recurring: isRecurring,
+        recurring_interval_months: recurMonths,
+        notes
+      });
+      showToast("Jadwal pengingat berhasil diperbarui!", "success");
+    } else {
+      await KendaraAPI.addSchedule({
+        vehicle_id: state.activeVehicleId,
+        title,
+        category,
+        due_date: dueDate,
+        target_odometer: targetKm ? Number(targetKm) : null,
+        est_cost: cost,
+        is_recurring: isRecurring,
+        recurring_interval_months: recurMonths,
+        notes
+      });
+      showToast("Pengingat berhasil dijadwalkan!", "success");
+    }
 
+    state.editingScheduleId = null;
     closeModal("modal-add-schedule");
     await refreshData();
-    showToast("Pengingat berhasil dijadwalkan!", "success");
+    if (window.Calendar) Calendar.render();
   }
 
   // Selesai & Bayar Modal for schedules
@@ -2243,6 +2308,8 @@ const App = (function () {
     openQuickSparepartModal,
     submitQuickSparepartForm,
     openAddScheduleModal,
+    openEditScheduleModal,
+    deleteScheduleConfirm,
     submitScheduleForm,
     openPayScheduleModal,
     submitPayScheduleForm,

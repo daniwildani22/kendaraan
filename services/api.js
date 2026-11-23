@@ -271,6 +271,13 @@ const KendaraAPI = (function () {
       throw new Error("Jadwal tidak ditemukan");
     },
 
+    async deleteSchedule(id) {
+      let list = await this.getSchedules();
+      list = list.filter((s) => s.id !== id);
+      localStorage.setItem(STORAGE_KEYS.SCHEDULES, JSON.stringify(list));
+      return true;
+    },
+
     async completeSchedule(id, paymentData = null) {
       const schedules = await this.getSchedules();
       const sch = schedules.find((s) => s.id === id);
@@ -501,6 +508,15 @@ const KendaraAPI = (function () {
       return LocalAdapter.updateSchedule(sch);
     },
 
+    async deleteSchedule(id) {
+      try {
+        await this.callGAS("delete_schedule", { id });
+      } catch (e) {
+        console.warn("GAS delete schedule failed:", e);
+      }
+      return LocalAdapter.deleteSchedule(id);
+    },
+
     async completeSchedule(id, paymentData = null) {
       try {
         await this.callGAS("complete_schedule", { id, paymentData });
@@ -727,6 +743,15 @@ const KendaraAPI = (function () {
       }
     },
 
+    async deleteSchedule(id) {
+      try {
+        await this.fetchSupabase(`schedules?id=eq.${id}`, { method: "DELETE" });
+      } catch (e) {
+        console.warn("Supabase delete schedule failed:", e);
+      }
+      return LocalAdapter.deleteSchedule(id);
+    },
+
     async completeSchedule(id, paymentData = null) {
       return LocalAdapter.completeSchedule(id, paymentData);
     }
@@ -829,6 +854,10 @@ const KendaraAPI = (function () {
 
     updateSchedule(sch) {
       return getAdapter().updateSchedule(sch);
+    },
+
+    deleteSchedule(id) {
+      return getAdapter().deleteSchedule(id);
     },
 
     completeSchedule(id, paymentData = null) {
