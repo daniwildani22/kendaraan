@@ -919,6 +919,19 @@ const KendaraAPI = (function () {
       return getAdapter().updateOdometer(vehicleId, newKm);
     },
 
+    async updateVehicle(vehicleId, updates) {
+      if (updates && updates.current_odometer !== undefined) {
+        await this.updateOdometer(vehicleId, updates.current_odometer);
+      }
+      const vehicles = await this.getVehicles();
+      const v = vehicles.find((item) => item.id === vehicleId);
+      if (v) {
+        Object.assign(v, updates);
+        return await this.saveVehicle(v);
+      }
+      return null;
+    },
+
     // Transactions repository
     getTransactions(vehicleId = null) {
       return getAdapter().getTransactions(vehicleId);
