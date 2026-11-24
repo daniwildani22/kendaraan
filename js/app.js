@@ -54,6 +54,21 @@ const App = (function () {
    */
   async function init() {
     initPWA();
+
+    // Check if returning from Google / Supabase OAuth callback redirect
+    try {
+      if (typeof KendaraAuth !== "undefined" && KendaraAuth.handleOAuthCallback) {
+        const oauthUser = await KendaraAuth.handleOAuthCallback();
+        if (oauthUser) {
+          showToast(`Berhasil masuk dengan Google! Halo, ${oauthUser.name || ""}`, "success", 4000);
+        }
+      }
+    } catch (oauthErr) {
+      console.warn("OAuth Callback warning:", oauthErr);
+      showAuthAlert("Login Google gagal: " + oauthErr.message, "error");
+      showToast("Login Google gagal: " + oauthErr.message, "error", 6500);
+    }
+
     const isLoggedIn = checkAuthStatus();
     if (!isLoggedIn) {
       if (window.lucide) lucide.createIcons();
@@ -1095,19 +1110,21 @@ const App = (function () {
    * Save Database Configuration
    */
   async function saveDatabaseSettings() {
-    const provider = document.getElementById("db-provider-select").value;
-    const gasUrl = document.getElementById("db-gas-url-input").value.trim();
-    const supabaseUrl = document.getElementById("db-supabase-url-input").value.trim();
-    const supabaseAnonKey = document.getElementById("db-supabase-key-input").value.trim();
+    const providerSelect = document.getElementById("db-provider-select");
+    const provider = providerSelect ? providerSelect.value : "SUPABASE";
+    const gasUrl = (document.getElementById("db-gas-url-input")?.value || "").trim();
+    const supabaseUrl = (document.getElementById("db-supabase-url-input")?.value || "").trim();
+    const supabaseAnonKey = (document.getElementById("db-supabase-key-input")?.value || "").trim();
 
+    const currentConfig = KendaraAPI.getConfig();
     KendaraAPI.setConfig({
       provider,
-      gasUrl,
-      supabaseUrl,
-      supabaseAnonKey
+      gasUrl: gasUrl || currentConfig.gasUrl,
+      supabaseUrl: supabaseUrl || currentConfig.supabaseUrl,
+      supabaseAnonKey: supabaseAnonKey || currentConfig.supabaseAnonKey
     });
 
-    showToast("Pengaturan database disimpan", "success");
+    showToast("Pengaturan database berhasil disimpan", "success");
     await testDatabaseConnection();
     await refreshData();
   }
@@ -1119,21 +1136,8 @@ const App = (function () {
     const statusEl = document.getElementById("db-connection-status");
     if (statusEl) {
       statusEl.className = "text-xs font-medium text-slate-500 flex items-center gap-1.5 mt-2";
-      statusEl.innerHTML = `<span class="animate-spin">🔄</span> Menguji koneksi...`;
+      statusEl.innerHTML = `<span class="animate-spin">🔄</span> Menguji koneksi cloud database...`;
     }
-
-    // Auto-update config dari input form sebelum menguji
-    const provider = document.getElementById("db-provider-select").value;
-    const gasUrl = (document.getElementById("db-gas-url-input").value || "").trim();
-    const supabaseUrl = (document.getElementById("db-supabase-url-input").value || "").trim();
-    const supabaseAnonKey = (document.getElementById("db-supabase-key-input").value || "").trim();
-
-    KendaraAPI.setConfig({
-      provider,
-      gasUrl,
-      supabaseUrl,
-      supabaseAnonKey
-    });
 
     try {
       const res = await KendaraAPI.testConnection();
@@ -1155,24 +1159,15 @@ const App = (function () {
   }
 
   /**
-   * Copy Cross-Device Sync Link for Mobile
+   * Copy Cross-Device Sync Link for Mobile (Secure, without exposing keys)
    */
   function copySyncLinkForMobile() {
-    const config = KendaraAPI.getConfig();
-    if (config.provider === "LOCAL_DEMO") {
-      showToast("Pilih provider Supabase dan simpan pengaturan terlebih dahulu.", "info");
-      return;
-    }
-    if (!config.supabaseUrl && !config.gasUrl) {
-      showToast("Isi URL dan Key database terlebih dahulu!", "error");
-      return;
-    }
     const syncUrl = KendaraAPI.generateSyncUrl();
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(syncUrl);
-      showToast("Tautan sinkronisasi disalin! Kirim ke WhatsApp dan buka di HP Anda.", "success");
+      showToast("Tautan aplikasi disalin! Buka tautan ini di browser HP Anda.", "success");
     } else {
-      prompt("Salin tautan sinkronisasi ini dan buka di HP Anda:", syncUrl);
+      prompt("Salin tautan aplikasi ini dan buka di HP Anda:", syncUrl);
     }
   }
 
@@ -3020,7 +3015,7 @@ const App = (function () {
   }
 
   // Toast Notification
-  function showToast(message, type = "info") {
+  function showToast(message, type = "info", duration = 3500) {
     const container = document.getElementById("toast-container");
     if (!container) return;
 
@@ -3034,6 +3029,9 @@ const App = (function () {
     } else if (type === "error") {
       bg = "bg-rose-700 text-white";
       icon = "alert-circle";
+    } else if (type === "warning") {
+      bg = "bg-amber-600 text-white";
+      icon = "alert-triangle";
     }
 
     toast.className = `flex items-center space-x-2 px-4 py-3 rounded-2xl shadow-lg text-xs font-semibold ${bg} transition-all duration-300 transform translate-y-2 opacity-0`;
@@ -3054,7 +3052,7 @@ const App = (function () {
     setTimeout(() => {
       toast.classList.add("opacity-0", "translate-y-2");
       setTimeout(() => toast.remove(), 300);
-    }, 3200);
+    }, duration);
   }
 
   function setupEventListeners() {
@@ -3207,20 +3205,61 @@ const App = (function () {
     }
   }
 
+  function showAuthAlert(message, type = "error") {
+    const container = document.getElementById("auth-alert-container");
+    if (!container) return;
+    const isError = type === "error";
+    const isWarning = type === "warning";
+    let bg = "bg-rose-50 border-rose-200 text-rose-900";
+    let icon = "alert-triangle";
+    let iconColor = "text-rose-600";
+    let title = "Kendala Autentikasi";
+
+    if (isWarning) {
+      bg = "bg-amber-50 border-amber-200 text-amber-900";
+      icon = "info";
+      iconColor = "text-amber-600";
+      title = "Pemberitahuan Akun";
+    }
+
+    container.className = `p-3.5 rounded-2xl border text-xs leading-relaxed flex items-start gap-2.5 ${bg} animate-fade-in`;
+    container.innerHTML = `
+      <i data-lucide="${icon}" class="w-4 h-4 flex-shrink-0 mt-0.5 ${iconColor}"></i>
+      <div class="flex-1 space-y-1">
+        <p class="font-bold text-[11px]">${title}</p>
+        <p class="text-[11px] leading-relaxed">${Utils.escapeHTML(message)}</p>
+      </div>
+      <button type="button" onclick="App.hideAuthAlert()" class="text-slate-400 hover:text-slate-600 p-0.5">
+        <i data-lucide="x" class="w-3.5 h-3.5"></i>
+      </button>
+    `;
+    container.classList.remove("hidden");
+    if (window.lucide) lucide.createIcons();
+  }
+
+  function hideAuthAlert() {
+    const container = document.getElementById("auth-alert-container");
+    if (container) {
+      container.classList.add("hidden");
+      container.innerHTML = "";
+    }
+  }
+
   function toggleAuthMode(mode) {
     authMode = mode;
+    hideAuthAlert();
     const tabLogin = document.getElementById("tab-auth-login");
     const tabRegister = document.getElementById("tab-auth-register");
     const nameGroup = document.getElementById("auth-name-group");
     const submitText = document.getElementById("auth-submit-text");
 
     if (mode === "login") {
-      tabLogin.className = "py-2.5 rounded-xl transition-all bg-white text-emerald-800 shadow-sm";
+      tabLogin.className = "py-2.5 rounded-xl transition-all bg-white text-[#0B4F9C] shadow-sm";
       tabRegister.className = "py-2.5 rounded-xl transition-all text-slate-500 hover:text-slate-900";
       nameGroup.classList.add("hidden");
       submitText.innerText = "Masuk Sekarang";
     } else {
-      tabRegister.className = "py-2.5 rounded-xl transition-all bg-white text-emerald-800 shadow-sm";
+      tabRegister.className = "py-2.5 rounded-xl transition-all bg-white text-[#0B4F9C] shadow-sm";
       tabLogin.className = "py-2.5 rounded-xl transition-all text-slate-500 hover:text-slate-900";
       nameGroup.classList.remove("hidden");
       submitText.innerText = "Daftar Akun Baru";
@@ -3244,6 +3283,7 @@ const App = (function () {
 
   async function submitAuthForm(e) {
     if (e) e.preventDefault();
+    hideAuthAlert();
     const email = document.getElementById("auth-email-input").value.trim();
     const password = document.getElementById("auth-password-input").value;
     const name = document.getElementById("auth-name-input")?.value?.trim() || "";
@@ -3258,14 +3298,21 @@ const App = (function () {
         await KendaraAuth.login(email, password);
         showToast("Berhasil masuk! Selamat datang kembali.", "success");
       } else {
-        await KendaraAuth.register(name, email, password);
+        const res = await KendaraAuth.register(name, email, password);
+        if (res && res.requiresConfirmation) {
+          showAuthAlert(res.message, "warning");
+          showToast("Pendaftaran berhasil dicatat! Konfirmasi email diperlukan di Supabase.", "info", 7000);
+          toggleAuthMode("login");
+          return;
+        }
         showToast("Pendaftaran berhasil! Selamat datang di KendaraTrack.", "success");
       }
       checkAuthStatus();
       await refreshData();
       switchTab("home");
     } catch (err) {
-      showToast("Gagal: " + err.message, "error");
+      showAuthAlert(err.message, "error");
+      showToast("Gagal: " + err.message, "error", 6500);
     } finally {
       submitBtn.disabled = false;
       submitBtn.innerHTML = originalText;
@@ -3279,6 +3326,35 @@ const App = (function () {
     checkAuthStatus();
     await refreshData();
     switchTab("home");
+  }
+
+  async function loginWithGoogle() {
+    hideAuthAlert();
+    try {
+      showToast("Menghubungkan ke Akun Google...", "info", 3000);
+      const user = await KendaraAuth.loginWithGoogle();
+      if (user) {
+        showToast("Berhasil masuk dengan Google!", "success");
+        checkAuthStatus();
+        await refreshData();
+        switchTab("home");
+      }
+    } catch (err) {
+      showAuthAlert("Gagal login Google: " + err.message, "error");
+      showToast("Gagal login Google: " + err.message, "error", 6500);
+    }
+  }
+
+  function toggleDevConfig() {
+    const el = document.getElementById("dev-db-config-section");
+    if (!el) return;
+    const isHidden = el.classList.contains("hidden");
+    el.classList.toggle("hidden");
+    const label = document.getElementById("dev-config-toggle-label");
+    if (label) {
+      label.innerText = isHidden ? "Tutup Pengaturan Pengembang" : "⚙️ Pengaturan Kredensial Lanjutan (Khusus Pemilik)";
+    }
+    if (window.lucide) lucide.createIcons();
   }
 
   function confirmLogout() {
@@ -3530,8 +3606,12 @@ const App = (function () {
     searchLocationInMaps,
     toggleAuthMode,
     toggleAuthPasswordVisibility,
+    showAuthAlert,
+    hideAuthAlert,
     submitAuthForm,
     loginAsGuest,
+    loginWithGoogle,
+    toggleDevConfig,
     confirmLogout,
     triggerPWAInstall,
     triggerPWAInstallDirect,

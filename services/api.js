@@ -1045,15 +1045,9 @@ const KendaraAPI = (function () {
       }
     },
 
-    // Generate Cross-Device Sync URL
+    // Generate Cross-Device Sync URL (Aman & Tidak Membocorkan Kunci Database)
     generateSyncUrl() {
-      const origin = window.location.origin + window.location.pathname;
-      if (config.provider === "SUPABASE") {
-        return `${origin}?sync_provider=SUPABASE&url=${encodeURIComponent(config.supabaseUrl)}&key=${encodeURIComponent(config.supabaseAnonKey)}`;
-      } else if (config.provider === "GAS") {
-        return `${origin}?sync_provider=GAS&gas=${encodeURIComponent(config.gasUrl)}`;
-      }
-      return origin;
+      return window.location.origin + window.location.pathname;
     },
 
     // Export Data as CSV
@@ -1083,6 +1077,7 @@ const KendaraAPI = (function () {
  */
 const KendaraAuth = (function () {
   const AUTH_KEY = "kendaratrack_auth_user";
+  const LOCAL_USERS_KEY = "kendaratrack_local_users";
 
   function getUser() {
     try {
@@ -1101,9 +1096,22 @@ const KendaraAuth = (function () {
     }
   }
 
+  function getLocalUsers() {
+    try {
+      const raw = localStorage.getItem(LOCAL_USERS_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function saveLocalUsers(users) {
+    localStorage.setItem(LOCAL_USERS_KEY, JSON.stringify(users));
+  }
+
   async function login(email, password) {
     if (!email || !password) {
-      throw new Error("Email dan password wajib diisi!");
+      throw new Error("Email dan kata sandi wajib diisi!");
     }
     const cleanEmail = email.trim().toLowerCase();
     const config = KendaraAPI.getConfig();
@@ -1121,7 +1129,20 @@ const KendaraAuth = (function () {
         });
         const data = await response.json();
         if (!response.ok) {
-          throw new Error(data.error_description || data.msg || data.message || "Gagal masuk ke Supabase");
+          const rawErr = (data.error_description || data.msg || data.message || data.error || "").toLowerCase();
+          if (rawErr.includes("invalid login credentials") || rawErr.includes("invalid_grant")) {
+            throw new Error(
+              "Email atau kata sandi tidak cocok, ATAU email Anda belum dikonfirmasi di Supabase. " +
+              "Solusi: Periksa inbox email Anda untuk klik link verifikasi, atau buka Supabase Dashboard > Authentication > Users, " +
+              "klik tombol (...) pada email Anda lalu pilih 'Confirm user' (atau nonaktifkan 'Confirm email' di Authentication > Providers > Email)."
+            );
+          } else if (rawErr.includes("email not confirmed")) {
+            throw new Error(
+              "Email belum diverifikasi! Buka inbox email Anda atau konfirmasi manual di Supabase Dashboard (Authentication > Users > Confirm user)."
+            );
+          } else {
+            throw new Error(data.error_description || data.msg || data.message || `Gagal masuk ke Supabase (${response.status})`);
+          }
         }
         const userObj = {
           id: data.user.id,
@@ -1139,13 +1160,43 @@ const KendaraAuth = (function () {
       }
     }
 
-    // Local / Demo Login Simulation
+    // Local / Offline Multi-User Login
+    const localUsers = getLocalUsers();
+    const existing = localUsers.find((u) => u.email === cleanEmail);
+    if (existing) {
+      if (existing.password && existing.password !== password) {
+        throw new Error("Kata sandi yang Anda masukkan salah!");
+      }
+      const userObj = {
+        id: existing.id,
+        email: existing.email,
+        name: existing.name || cleanEmail.split("@")[0],
+        avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&q=80",
+        token: "local-jwt-" + Date.now(),
+        provider: "local",
+        is_demo: false
+      };
+      setUser(userObj);
+      return userObj;
+    }
+
+    // If local user doesn't exist yet in local registry, auto-register as local account
     const namePart = cleanEmail.split("@")[0].replace(/[._]/g, " ");
     const formattedName = namePart.charAt(0).toUpperCase() + namePart.slice(1);
-    const userObj = {
+    const newLocalUser = {
       id: "usr-" + cleanEmail.replace(/[^a-zA-Z0-9]/g, "_"),
       email: cleanEmail,
       name: formattedName || "Pengendara",
+      password: password,
+      createdAt: new Date().toISOString()
+    };
+    localUsers.push(newLocalUser);
+    saveLocalUsers(localUsers);
+
+    const userObj = {
+      id: newLocalUser.id,
+      email: cleanEmail,
+      name: newLocalUser.name,
       avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&q=80",
       token: "local-jwt-" + Date.now(),
       provider: "local",
@@ -1157,7 +1208,7 @@ const KendaraAuth = (function () {
 
   async function register(name, email, password) {
     if (!name || !email || !password) {
-      throw new Error("Nama, email, dan password wajib diisi!");
+      throw new Error("Nama, email, dan kata sandi wajib diisi!");
     }
     const cleanEmail = email.trim().toLowerCase();
     const cleanName = name.trim();
@@ -1180,14 +1231,35 @@ const KendaraAuth = (function () {
         });
         const data = await response.json();
         if (!response.ok) {
-          throw new Error(data.error_description || data.msg || data.message || "Gagal mendaftar ke Supabase");
+          const rawErr = (data.error_description || data.msg || data.message || data.error_code || "").toLowerCase();
+          if (response.status === 429 || rawErr.includes("rate limit") || rawErr.includes("over_email_send_rate_limit")) {
+            throw new Error(
+              "Batas limit pengiriman email Supabase tercapai (Error 429: Rate Limit Exceeded). " +
+              "Solusi Cepat: Buka Supabase Dashboard > Authentication > Providers > Email, matikan saklar 'Confirm email', lalu klik Save. " +
+              "Setelah dimatikan, semua pengguna baru akan langsung aktif seketika tanpa perlu verifikasi email!"
+            );
+          } else if (rawErr.includes("already registered") || rawErr.includes("user already exists")) {
+            throw new Error("Email ini sudah terdaftar di Supabase! Silakan beralih ke tab 'Masuk Akun'.");
+          } else {
+            throw new Error(data.error_description || data.msg || data.message || `Gagal mendaftar ke Supabase (${response.status})`);
+          }
         }
+
+        // If email confirmation is enabled in Supabase, session is null until confirmed
+        if (!data.session && (!data.user || !data.user.confirmed_at)) {
+          return {
+            requiresConfirmation: true,
+            email: cleanEmail,
+            message: "Pendaftaran berhasil dicatat! Karena verifikasi email aktif di Supabase, silakan periksa kotak masuk email Anda untuk verifikasi, atau buka Supabase Dashboard > Authentication > Users lalu klik 'Confirm user'."
+          };
+        }
+
         const userObj = {
           id: data.user?.id || "usr-" + Date.now(),
           email: cleanEmail,
           name: cleanName,
           avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&q=80",
-          token: data.access_token || "pending_confirmation",
+          token: data.access_token || "supabase-session",
           provider: "supabase",
           is_demo: false
         };
@@ -1199,8 +1271,22 @@ const KendaraAuth = (function () {
     }
 
     // Local registration
-    const userObj = {
+    const localUsers = getLocalUsers();
+    if (localUsers.some((u) => u.email === cleanEmail)) {
+      throw new Error("Email ini sudah terdaftar di database lokal! Silakan langsung masuk.");
+    }
+    const newLocalUser = {
       id: "usr-" + cleanEmail.replace(/[^a-zA-Z0-9]/g, "_"),
+      email: cleanEmail,
+      name: cleanName,
+      password: password,
+      createdAt: new Date().toISOString()
+    };
+    localUsers.push(newLocalUser);
+    saveLocalUsers(localUsers);
+
+    const userObj = {
+      id: newLocalUser.id,
       email: cleanEmail,
       name: cleanName,
       avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&q=80",
@@ -1226,6 +1312,86 @@ const KendaraAuth = (function () {
     return guestUser;
   }
 
+  async function loginWithGoogle() {
+    const config = KendaraAPI.getConfig();
+    if (config.provider === "SUPABASE" && config.supabaseUrl && config.supabaseAnonKey) {
+      const baseUrl = config.supabaseUrl.trim().replace(/\/+$/, "");
+      const cleanRedirectUrl = window.location.origin + window.location.pathname;
+      const googleAuthUrl = `${baseUrl}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(cleanRedirectUrl)}`;
+      window.location.href = googleAuthUrl;
+      return;
+    }
+
+    // Local / Offline Simulated Google Login
+    const googleUser = {
+      id: "usr-google-" + Date.now(),
+      email: "user.google@gmail.com",
+      name: "Pengendara Google",
+      avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&q=80",
+      token: "google-local-session",
+      provider: "google",
+      is_demo: false
+    };
+    setUser(googleUser);
+    return googleUser;
+  }
+
+  async function handleOAuthCallback() {
+    const hash = window.location.hash ? window.location.hash.substring(1) : "";
+    const searchParams = new URLSearchParams(window.location.search);
+    
+    // Check if error returned in hash or search
+    const hashParams = new URLSearchParams(hash);
+    const errorDesc = hashParams.get("error_description") || searchParams.get("error_description");
+    if (errorDesc) {
+      window.history.replaceState({}, document.title, window.location.origin + window.location.pathname);
+      const decoded = decodeURIComponent(errorDesc.replace(/\+/g, " "));
+      if (decoded.toLowerCase().includes("unsupported provider") || decoded.toLowerCase().includes("not enabled")) {
+        throw new Error("Provider Google belum diaktifkan di dashboard Supabase (Authentication > Providers > Google).");
+      }
+      throw new Error(decoded);
+    }
+
+    const accessToken = hashParams.get("access_token");
+    if (!accessToken) {
+      return null;
+    }
+
+    const config = KendaraAPI.getConfig();
+    const baseUrl = (config.supabaseUrl || "").trim().replace(/\/+$/, "");
+
+    try {
+      const res = await fetch(`${baseUrl}/auth/v1/user`, {
+        headers: {
+          "Authorization": `Bearer ${accessToken}`,
+          "apikey": config.supabaseAnonKey
+        }
+      });
+      if (!res.ok) {
+        throw new Error("Gagal mengambil data akun Google dari Supabase");
+      }
+      const userData = await res.json();
+      const meta = userData.user_metadata || {};
+      const userObj = {
+        id: userData.id,
+        email: userData.email,
+        name: meta.full_name || meta.name || userData.email.split("@")[0],
+        avatar: meta.avatar_url || meta.picture || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&q=80",
+        token: accessToken,
+        provider: "supabase",
+        is_demo: false
+      };
+      setUser(userObj);
+
+      // Clean address bar hash to keep URL tidy and remove tokens from view
+      window.history.replaceState({}, document.title, window.location.origin + window.location.pathname);
+      return userObj;
+    } catch (err) {
+      window.history.replaceState({}, document.title, window.location.origin + window.location.pathname);
+      throw err;
+    }
+  }
+
   function logout() {
     setUser(null);
   }
@@ -1235,8 +1401,11 @@ const KendaraAuth = (function () {
     setUser,
     login,
     register,
+    loginWithGoogle,
+    handleOAuthCallback,
     loginAsGuest,
-    logout
+    logout,
+    getLocalUsers
   };
 })();
 
