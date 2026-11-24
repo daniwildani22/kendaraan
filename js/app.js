@@ -766,10 +766,13 @@ const App = (function () {
     if (oilBrandEl) oilBrandEl.innerText = oil.oilBrand;
     if (oilDateEl) oilDateEl.innerText = Utils.formatDateIndo(oil.lastDate);
 
-    // 2. Sparepart Replacement History Timeline
+    // 2. Fuel Efficiency Card
+    renderFuelCard(vehicle);
+
+    // 3. Sparepart Replacement History Timeline
     renderSparepartTimeline();
 
-    // 3. Vehicle Documents Card
+    // 4. Vehicle Documents Card
     renderVehicleDocuments(vehicle);
   }
 
@@ -1399,6 +1402,14 @@ const App = (function () {
       if (currentAmount) document.getElementById("sch-form-cost").value = currentAmount;
       if (currentDate) document.getElementById("sch-form-target-date").value = currentDate;
       if (currentNotes) document.getElementById("sch-form-title").value = currentNotes;
+    } else if (type === "bbm") {
+      openQuickFuelModal();
+      if (currentAmount) document.getElementById("qfuel-amount").value = currentAmount;
+      if (currentDate) document.getElementById("qfuel-date").value = currentDate;
+      if (currentOdo) document.getElementById("qfuel-odometer").value = currentOdo;
+      if (currentBengkel) document.getElementById("qfuel-station").value = currentBengkel;
+      if (currentNotes) document.getElementById("qfuel-notes").value = currentNotes;
+      syncFuelAmountToLiters();
     }
   }
 
@@ -1632,6 +1643,452 @@ const App = (function () {
     closeModal("modal-quick-sparepart");
     await refreshData();
     showToast("Catatan sparepart berhasil disimpan!", "success");
+  }
+
+  // ============================================================
+  // Fuel (BBM) Consumption & Efficiency Analytics Engine
+  // ============================================================
+
+  function getFuelAnalytics(vehicleId) {
+    const targetVehicleId = vehicleId || state.activeVehicleId;
+    const vehicle = state.vehicles.find((v) => v.id === targetVehicleId);
+
+    // Get all fuel transactions for this vehicle
+    const bbmTxs = (state.transactions || []).filter(
+      (tx) => tx.vehicle_id === targetVehicleId && tx.category === "bbm" && tx.type === "pengeluaran"
+    );
+
+    // Sort ascending by odometer (or date if odometer matches)
+    const sorted = [...bbmTxs].sort((a, b) => {
+      const odoA = Number(a.odometer) || 0;
+      const odoB = Number(b.odometer) || 0;
+      if (odoA !== odoB) return odoA - odoB;
+      return new Date(a.date) - new Date(b.date);
+    });
+
+    let totalDeltaKm = 0;
+    let totalLiters = 0;
+    let totalCost = 0;
+    let monthlyLiters = 0;
+    let monthlyCost = 0;
+
+    const currentYearMonth = new Date().toISOString().slice(0, 7); // e.g. "2026-11"
+    const historyWithMetrics = [];
+
+    for (let i = 0; i < sorted.length; i++) {
+      const current = sorted[i];
+      const prev = i > 0 ? sorted[i - 1] : null;
+      const liters = Number(current.fuel_liters) || 0;
+      const amount = Number(current.amount) || 0;
+
+      totalLiters += liters;
+      totalCost += amount;
+
+      if (current.date && current.date.startsWith(currentYearMonth)) {
+        monthlyLiters += liters;
+        monthlyCost += amount;
+      }
+
+      let deltaKm = null;
+      let kmPerLiter = null;
+      let costPerKm = null;
+
+      if (prev && current.odometer && prev.odometer) {
+        const diff = Number(current.odometer) - Number(prev.odometer);
+        if (diff > 0) {
+          deltaKm = diff;
+          if (liters > 0) {
+            kmPerLiter = Math.round((diff / liters) * 10) / 10;
+            costPerKm = Math.round(amount / diff);
+            totalDeltaKm += diff;
+          }
+        }
+      }
+
+      historyWithMetrics.push({
+        ...current,
+        deltaKm,
+        kmPerLiter,
+        costPerKm
+      });
+    }
+
+    // Overall average efficiency
+    let avgKmLiter = null;
+    let avgCostPerKm = null;
+
+    if (totalDeltaKm > 0 && totalLiters > 0) {
+      let litersForDeltas = 0;
+      for (let i = 1; i < historyWithMetrics.length; i++) {
+        if (historyWithMetrics[i].deltaKm) {
+          litersForDeltas += Number(historyWithMetrics[i].fuel_liters) || 0;
+        }
+      }
+      if (litersForDeltas > 0) {
+        avgKmLiter = Math.round((totalDeltaKm / litersForDeltas) * 10) / 10;
+        avgCostPerKm = Math.round(totalCost / totalDeltaKm);
+      }
+    } else if (historyWithMetrics.length > 0) {
+      // If only 1 entry or initial entry, provide standard vehicle benchmark
+      avgKmLiter = vehicle && vehicle.type === "mobil" ? 13.5 : 42.5;
+      avgCostPerKm = vehicle && vehicle.type === "mobil" ? 950 : 285;
+    }
+
+    // Status label and badge
+    let statusLabel = "Cukup Irit";
+    let badgeClass = "bg-blue-100 text-blue-800";
+
+    const isMobil = vehicle && vehicle.type === "mobil";
+    const thresholdHigh = isMobil ? 14 : 42;
+    const thresholdLow = isMobil ? 9 : 32;
+
+    if (!avgKmLiter || historyWithMetrics.length <= 1) {
+      statusLabel = historyWithMetrics.length === 1 ? "Perlu 1 Isi Lagi" : "Belum Ada Data";
+      badgeClass = "bg-slate-100 text-slate-700";
+    } else if (avgKmLiter >= thresholdHigh) {
+      statusLabel = "Sangat Irit";
+      badgeClass = "bg-emerald-100 text-emerald-800";
+    } else if (avgKmLiter >= thresholdLow) {
+      statusLabel = "Normal / Standar";
+      badgeClass = "bg-blue-100 text-blue-800";
+    } else {
+      statusLabel = "Cukup Boros";
+      badgeClass = "bg-amber-100 text-amber-800";
+    }
+
+    return {
+      vehicle,
+      avgKmLiter,
+      avgCostPerKm,
+      monthlyLiters,
+      monthlyCost,
+      totalLiters,
+      totalCost,
+      totalDeltaKm,
+      statusLabel,
+      badgeClass,
+      history: historyWithMetrics.reverse()
+    };
+  }
+
+  function renderFuelCard(vehicle) {
+    if (!vehicle) return;
+    const fuel = getFuelAnalytics(vehicle.id);
+    const kmPerLEl = document.getElementById("fuel-card-km-per-l");
+    const costPerKmEl = document.getElementById("fuel-card-cost-per-km");
+    const monthlyLitersEl = document.getElementById("fuel-card-monthly-liters");
+    const badgeEl = document.getElementById("fuel-card-badge");
+
+    if (kmPerLEl) kmPerLEl.innerText = fuel.avgKmLiter ? `${fuel.avgKmLiter} KM/L` : "- KM/L";
+    if (costPerKmEl) costPerKmEl.innerText = fuel.avgCostPerKm ? Utils.formatRupiah(fuel.avgCostPerKm) : "Rp -";
+    if (monthlyLitersEl) monthlyLitersEl.innerText = `${fuel.monthlyLiters.toFixed(1)} L`;
+    if (badgeEl) {
+      badgeEl.innerText = fuel.statusLabel;
+      badgeEl.className = `text-xs px-2.5 py-1 rounded-full font-semibold ${fuel.badgeClass}`;
+    }
+  }
+
+  function openFuelHubModal() {
+    const vehicle = state.vehicles.find((v) => v.id === state.activeVehicleId);
+    if (!vehicle) return;
+
+    const fuel = getFuelAnalytics(vehicle.id);
+
+    // Vehicle Title
+    const nameEl = document.getElementById("fuel-hub-vehicle-name");
+    if (nameEl) nameEl.innerText = `${vehicle.name} • ${vehicle.plate_number}`;
+
+    // Top 4 Metrics
+    const avgEffEl = document.getElementById("fuel-hub-avg-efficiency");
+    const ratingBadgeEl = document.getElementById("fuel-hub-rating-badge");
+    const costPerKmEl = document.getElementById("fuel-hub-cost-per-km");
+    const monthlyLitersEl = document.getElementById("fuel-hub-monthly-liters");
+    const monthlyCostEl = document.getElementById("fuel-hub-monthly-cost");
+    const totalLitersEl = document.getElementById("fuel-hub-total-liters");
+    const totalCostEl = document.getElementById("fuel-hub-total-cost");
+
+    if (avgEffEl) avgEffEl.innerText = fuel.avgKmLiter ? `${fuel.avgKmLiter} KM/L` : "- KM/L";
+    if (ratingBadgeEl) {
+      ratingBadgeEl.innerText = fuel.statusLabel;
+      ratingBadgeEl.className = `inline-block text-[10px] px-2 py-0.5 mt-1 rounded-full font-bold ${fuel.badgeClass}`;
+    }
+    if (costPerKmEl) costPerKmEl.innerText = fuel.avgCostPerKm ? Utils.formatRupiah(fuel.avgCostPerKm) : "Rp -";
+    if (monthlyLitersEl) monthlyLitersEl.innerText = `${fuel.monthlyLiters.toFixed(2)} L`;
+    if (monthlyCostEl) monthlyCostEl.innerText = Utils.formatRupiah(fuel.monthlyCost);
+    if (totalLitersEl) totalLitersEl.innerText = `${fuel.totalLiters.toFixed(2)} L`;
+    if (totalCostEl) totalCostEl.innerText = Utils.formatRupiah(fuel.totalCost);
+
+    // Pre-fill instant calculator with last 2 logs if available
+    const calcOdoStart = document.getElementById("calc-odo-start");
+    const calcOdoEnd = document.getElementById("calc-odo-end");
+    const calcLiters = document.getElementById("calc-liters");
+    const calcCost = document.getElementById("calc-cost");
+    const calcResultBox = document.getElementById("calc-result-box");
+    if (calcResultBox) calcResultBox.classList.add("hidden");
+
+    if (fuel.history && fuel.history.length >= 2) {
+      const latest = fuel.history[0];
+      const prev = fuel.history[1];
+      if (calcOdoStart && !calcOdoStart.value) calcOdoStart.value = prev.odometer || "";
+      if (calcOdoEnd && !calcOdoEnd.value) calcOdoEnd.value = latest.odometer || "";
+      if (calcLiters && !calcLiters.value) calcLiters.value = latest.fuel_liters || "";
+      if (calcCost && !calcCost.value) calcCost.value = latest.amount || "";
+    } else if (calcOdoEnd && !calcOdoEnd.value && vehicle.current_odometer) {
+      calcOdoEnd.value = vehicle.current_odometer;
+    }
+
+    // Render Refueling History List
+    renderFuelHistoryList(fuel.history);
+
+    openModal("modal-fuel-hub");
+    if (window.lucide) lucide.createIcons();
+  }
+
+  function renderFuelHistoryList(history) {
+    const listEl = document.getElementById("fuel-history-list");
+    const countEl = document.getElementById("fuel-log-count");
+    if (!listEl) return;
+
+    if (countEl) countEl.innerText = `${history.length} Catatan`;
+
+    if (!history || history.length === 0) {
+      listEl.innerHTML = `
+        <div class="p-6 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+          <i data-lucide="fuel" class="w-8 h-8 text-slate-300 mx-auto mb-2"></i>
+          <p class="text-xs font-semibold text-slate-600">Belum ada riwayat pengisian bensin.</p>
+          <p class="text-[11px] text-slate-400 mt-0.5">Catat bensin pertama Anda untuk mulai memantau efisiensi KM/Liter.</p>
+          <button type="button" onclick="App.closeModal('modal-fuel-hub'); App.openQuickFuelModal();"
+            class="mt-3 px-3 py-1.5 rounded-xl bg-blue-50 text-[#0B4F9C] text-xs font-bold hover:bg-blue-100 transition-colors">
+            + Catat Sekarang
+          </button>
+        </div>
+      `;
+      return;
+    }
+
+    let html = "";
+    history.forEach((item) => {
+      const fuelType = item.fuel_type || "Bahan Bakar";
+      const station = item.bengkel_name || "SPBU";
+      const odoStr = item.odometer ? Utils.formatKm(item.odometer) : "-";
+      const effBadge = item.kmPerLiter
+        ? `<span class="px-2 py-0.5 text-[10px] rounded-lg font-bold bg-emerald-100 text-emerald-800">${item.kmPerLiter} KM/L</span>`
+        : `<span class="px-2 py-0.5 text-[10px] rounded-lg font-medium bg-slate-100 text-slate-500">Isi Pertama</span>`;
+
+      const deltaBadge = item.deltaKm
+        ? `<span class="text-[10px] font-semibold text-blue-600">+${item.deltaKm} KM</span>`
+        : "";
+
+      html += `
+        <div class="p-3 bg-white rounded-2xl border border-slate-100 shadow-2xs hover:shadow-xs transition-shadow space-y-1.5">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <div class="w-8 h-8 rounded-xl bg-blue-50 text-[#0B4F9C] flex items-center justify-center font-bold text-xs flex-shrink-0">
+                <i data-lucide="fuel" class="w-4 h-4"></i>
+              </div>
+              <div class="min-w-0">
+                <h5 class="text-xs font-bold text-slate-900 truncate">${Utils.escapeHTML(fuelType)}</h5>
+                <p class="text-[10px] text-slate-500 truncate">${Utils.escapeHTML(station)} • ${Utils.formatDateIndo(item.date)}</p>
+              </div>
+            </div>
+            <div class="text-right flex-shrink-0">
+              ${effBadge}
+              <p class="text-xs font-black text-slate-900 mt-1">${Utils.formatRupiah(item.amount)}</p>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between pt-1 border-t border-slate-50 text-[10px] text-slate-500">
+            <span>Odo: <strong class="text-slate-700">${odoStr}</strong> ${deltaBadge ? `(${deltaBadge})` : ""}</span>
+            <span>Liter: <strong class="text-slate-700">${item.fuel_liters ? item.fuel_liters + " L" : "-"}</strong> ${item.costPerKm ? `• ${Utils.formatRupiah(item.costPerKm)}/KM` : ""}</span>
+          </div>
+
+          ${item.notes ? `<p class="text-[10px] text-slate-400 italic bg-slate-50 p-1.5 rounded-lg">"${Utils.escapeHTML(item.notes)}"</p>` : ""}
+        </div>
+      `;
+    });
+
+    listEl.innerHTML = html;
+  }
+
+  function toggleFuelCalculator() {
+    const body = document.getElementById("fuel-calc-body");
+    const toggleText = document.getElementById("calc-toggle-text");
+    if (!body || !toggleText) return;
+
+    if (body.classList.contains("hidden")) {
+      body.classList.remove("hidden");
+      toggleText.innerText = "Tutup";
+    } else {
+      body.classList.add("hidden");
+      toggleText.innerText = "Buka";
+    }
+  }
+
+  function calculateFuelEfficiencyManual() {
+    const odoStart = Number(document.getElementById("calc-odo-start").value);
+    const odoEnd = Number(document.getElementById("calc-odo-end").value);
+    const liters = Number(document.getElementById("calc-liters").value);
+    const cost = Number(document.getElementById("calc-cost").value) || 0;
+    const resultBox = document.getElementById("calc-result-box");
+    const resultKml = document.getElementById("calc-result-kml");
+    const resultExtra = document.getElementById("calc-result-extra");
+
+    if (!odoStart || !odoEnd || !liters || liters <= 0) {
+      showToast("Lengkapi Odometer Awal, Baru, dan Jumlah Liter", "error");
+      return;
+    }
+
+    const delta = odoEnd - odoStart;
+    if (delta <= 0) {
+      showToast("Odometer Baru harus lebih besar dari Odometer Awal", "error");
+      return;
+    }
+
+    const kml = (delta / liters).toFixed(1);
+    let extraText = `(Jarak: ${delta} KM, Konsumsi: ${liters} L)`;
+
+    if (cost > 0) {
+      const rpPerKm = Math.round(cost / delta);
+      extraText += ` • Biaya: ${Utils.formatRupiah(rpPerKm)}/KM`;
+    }
+
+    if (resultKml) resultKml.innerText = `${kml} KM/L`;
+    if (resultExtra) resultExtra.innerText = extraText;
+    if (resultBox) resultBox.classList.remove("hidden");
+  }
+
+  function openQuickFuelModal() {
+    const vehicle = state.vehicles.find((v) => v.id === state.activeVehicleId);
+    if (!vehicle) return;
+
+    const form = document.getElementById("quick-fuel-form");
+    if (form) form.reset();
+
+    const dateEl = document.getElementById("qfuel-date");
+    if (dateEl) dateEl.value = new Date().toISOString().split("T")[0];
+
+    const odoEl = document.getElementById("qfuel-odometer");
+    if (odoEl) odoEl.value = vehicle.current_odometer || "";
+
+    const hintEl = document.getElementById("qfuel-last-odo-hint");
+    if (hintEl) hintEl.innerText = `Terakhir: ${Utils.formatKm(vehicle.current_odometer || 0)}`;
+
+    const fullTankEl = document.getElementById("qfuel-full-tank");
+    if (fullTankEl) fullTankEl.checked = true;
+
+    openModal("modal-quick-fuel");
+    if (window.lucide) lucide.createIcons();
+  }
+
+  function handleFuelTypeChange() {
+    syncFuelAmountToLiters();
+  }
+
+  function syncFuelAmountToLiters() {
+    const typeSelect = document.getElementById("qfuel-fuel-type");
+    const amountEl = document.getElementById("qfuel-amount");
+    const litersEl = document.getElementById("qfuel-liters");
+    if (!typeSelect || !amountEl || !litersEl) return;
+
+    const selectedOption = typeSelect.options[typeSelect.selectedIndex];
+    const pricePerLiter = Number(selectedOption.getAttribute("data-price")) || 0;
+    const amount = Number(amountEl.value) || 0;
+
+    if (pricePerLiter > 0 && amount > 0) {
+      const calculatedLiters = (amount / pricePerLiter).toFixed(2);
+      litersEl.value = calculatedLiters;
+    }
+  }
+
+  function syncFuelLitersToAmount() {
+    const typeSelect = document.getElementById("qfuel-fuel-type");
+    const amountEl = document.getElementById("qfuel-amount");
+    const litersEl = document.getElementById("qfuel-liters");
+    if (!typeSelect || !amountEl || !litersEl) return;
+
+    const selectedOption = typeSelect.options[typeSelect.selectedIndex];
+    const pricePerLiter = Number(selectedOption.getAttribute("data-price")) || 0;
+    const liters = Number(litersEl.value) || 0;
+
+    if (pricePerLiter > 0 && liters > 0) {
+      const calculatedAmount = Math.round(liters * pricePerLiter);
+      amountEl.value = calculatedAmount;
+    }
+  }
+
+  async function submitQuickFuelForm(e) {
+    if (e) e.preventDefault();
+
+    const date = document.getElementById("qfuel-date").value;
+    const odometer = Number(document.getElementById("qfuel-odometer").value);
+    const fuelTypeSelect = document.getElementById("qfuel-fuel-type");
+    const fuelType = fuelTypeSelect ? fuelTypeSelect.value : "Pertamax";
+    const pricePerLiter = fuelTypeSelect ? Number(fuelTypeSelect.options[fuelTypeSelect.selectedIndex]?.getAttribute("data-price")) || 0 : 0;
+    const amount = Number(document.getElementById("qfuel-amount").value);
+    const liters = Number(document.getElementById("qfuel-liters").value);
+    const station = document.getElementById("qfuel-station").value.trim();
+    const isFullTank = document.getElementById("qfuel-full-tank")?.checked ?? true;
+    const notesInput = document.getElementById("qfuel-notes").value.trim();
+
+    if (!odometer || odometer <= 0) {
+      showToast("Masukkan KM odometer pengisian bensin", "error");
+      return;
+    }
+
+    if (!amount || amount <= 0) {
+      showToast("Masukkan total biaya pengisian", "error");
+      return;
+    }
+
+    if (!liters || liters <= 0) {
+      showToast("Masukkan jumlah liter", "error");
+      return;
+    }
+
+    let photoReceipt = "";
+    const photoInput = document.getElementById("qfuel-photo");
+    if (photoInput && photoInput.files && photoInput.files[0]) {
+      try {
+        photoReceipt = await Utils.compressImage(photoInput.files[0]);
+      } catch (err) {
+        console.warn("Gagal compress foto struk BBM", err);
+      }
+    }
+
+    const fullTankNote = isFullTank ? "[Full Tank]" : "[Isi Sebagian]";
+    const combinedNotes = `${fullTankNote} ${fuelType} ${liters}L. ${notesInput}`.trim();
+
+    // 1. Add transaction
+    await KendaraAPI.addTransaction({
+      vehicle_id: state.activeVehicleId,
+      type: "pengeluaran",
+      category: "bbm",
+      amount,
+      date,
+      odometer,
+      fuel_liters: liters,
+      fuel_price_per_liter: pricePerLiter,
+      fuel_type: fuelType,
+      bengkel_name: station || "SPBU",
+      notes: combinedNotes,
+      photo_receipt: photoReceipt
+    });
+
+    // 2. Update vehicle current odometer if higher
+    const vehicle = state.vehicles.find((v) => v.id === state.activeVehicleId);
+    if (vehicle && odometer > (vehicle.current_odometer || 0)) {
+      await KendaraAPI.updateVehicle(vehicle.id, { current_odometer: odometer });
+    }
+
+    closeModal("modal-quick-fuel");
+    await refreshData();
+    showToast("Pengisian bensin berhasil dicatat!", "success");
+
+    // If fuel hub modal was open, refresh its view
+    const fuelHubEl = document.getElementById("modal-fuel-hub");
+    if (fuelHubEl && !fuelHubEl.classList.contains("hidden")) {
+      openFuelHubModal();
+    }
   }
 
   // Quick Schedule / Reminder Modal
@@ -2351,6 +2808,15 @@ const App = (function () {
     submitQuickOilForm,
     openQuickSparepartModal,
     submitQuickSparepartForm,
+    getFuelAnalytics,
+    openFuelHubModal,
+    openQuickFuelModal,
+    handleFuelTypeChange,
+    syncFuelAmountToLiters,
+    syncFuelLitersToAmount,
+    submitQuickFuelForm,
+    toggleFuelCalculator,
+    calculateFuelEfficiencyManual,
     openAddScheduleModal,
     openEditScheduleModal,
     deleteScheduleConfirm,

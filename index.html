@@ -341,12 +341,12 @@
 
           <div class="grid grid-cols-4 gap-2.5">
             <!-- Card 1: Bahan Bakar (BBM) -->
-            <button onclick="App.openAddTransactionModal('bbm')" 
+            <button onclick="App.openFuelHubModal()" 
               class="flex flex-col items-center justify-center p-2.5 rounded-2xl bg-white border border-slate-100 shadow-2xs hover:shadow-md transition-all active:scale-95 group aspect-square">
               <div class="w-11 h-11 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mb-1.5 group-hover:scale-110 transition-transform shadow-2xs">
                 <i data-lucide="fuel" class="w-5 h-5"></i>
               </div>
-              <span class="text-[11px] font-bold text-slate-700 text-center leading-tight">Bahan Bakar</span>
+              <span class="text-[11px] font-bold text-slate-700 text-center leading-tight">Konsumsi BBM</span>
             </button>
 
             <!-- Card 2: Ganti Oli -->
@@ -715,6 +715,54 @@
             <i data-lucide="plus" class="w-4 h-4"></i>
             <span>Catat Ganti Oli Baru</span>
           </button>
+        </div>
+
+        <!-- Fuel Consumption & Efficiency Card -->
+        <div class="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm space-y-4">
+          <div class="flex items-start justify-between">
+            <div class="flex items-center space-x-3">
+              <div class="w-11 h-11 rounded-2xl bg-blue-50 text-[#0B4F9C] flex items-center justify-center">
+                <i data-lucide="fuel" class="w-6 h-6"></i>
+              </div>
+              <div>
+                <h3 class="text-sm font-bold text-slate-900">Efisiensi Bahan Bakar (BBM)</h3>
+                <p id="fuel-card-subtitle" class="text-xs text-slate-400">Rata-rata Konsumsi Real-Time</p>
+              </div>
+            </div>
+            <span id="fuel-card-badge" class="text-xs px-2.5 py-1 rounded-full font-semibold bg-emerald-100 text-emerald-800">
+              Sangat Irit
+            </span>
+          </div>
+
+          <!-- Main Stats & Quick Metrics -->
+          <div class="grid grid-cols-3 gap-2 p-3 bg-slate-50/80 rounded-2xl border border-slate-100 text-center">
+            <div>
+              <p class="text-[10px] text-slate-400 font-semibold uppercase">Konsumsi</p>
+              <p id="fuel-card-km-per-l" class="text-sm font-extrabold text-[#0B4F9C] mt-0.5">44.4 KM/L</p>
+            </div>
+            <div class="border-x border-slate-200">
+              <p class="text-[10px] text-slate-400 font-semibold uppercase">Biaya / KM</p>
+              <p id="fuel-card-cost-per-km" class="text-sm font-extrabold text-slate-800 mt-0.5">Rp 281</p>
+            </div>
+            <div>
+              <p class="text-[10px] text-slate-400 font-semibold uppercase">Bulan Ini</p>
+              <p id="fuel-card-monthly-liters" class="text-sm font-extrabold text-slate-800 mt-0.5">7.0 L</p>
+            </div>
+          </div>
+
+          <!-- Dual Action Buttons -->
+          <div class="grid grid-cols-2 gap-2 pt-1">
+            <button onclick="App.openFuelHubModal()"
+              class="py-2.5 rounded-xl border border-[#0B4F9C]/30 bg-blue-50/50 text-[#0B4F9C] text-xs font-bold hover:bg-blue-100/50 flex items-center justify-center gap-1.5 active:scale-98 transition-colors">
+              <i data-lucide="bar-chart-2" class="w-4 h-4"></i>
+              <span>Hub Analisis BBM</span>
+            </button>
+            <button onclick="App.openQuickFuelModal()"
+              class="py-2.5 rounded-xl bg-gradient-to-r from-[#0A3981] to-[#0B4F9C] text-white text-xs font-bold hover:opacity-95 shadow-sm flex items-center justify-center gap-1.5 active:scale-98 transition-all">
+              <i data-lucide="plus" class="w-4 h-4"></i>
+              <span>Catat Isi Bensin</span>
+            </button>
+          </div>
         </div>
 
         <!-- Sparepart Replacement History Timeline -->
@@ -1801,6 +1849,243 @@
           Tutup Panduan
         </button>
       </div>
+    </div>
+  </div>
+
+  <!-- Modal 11: Hub Analisis & Riwayat Konsumsi BBM -->
+  <div id="modal-fuel-hub" class="modal-backdrop fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 hidden">
+    <div class="w-full max-w-lg bg-white rounded-t-3xl sm:rounded-3xl p-5 shadow-2xl animate-fade-in max-h-[92vh] overflow-y-auto space-y-4">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+        <div class="flex items-center gap-2.5">
+          <div class="w-10 h-10 rounded-2xl bg-blue-50 text-[#0B4F9C] flex items-center justify-center shadow-2xs">
+            <i data-lucide="fuel" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-extrabold text-slate-900">Hub Konsumsi & Efisiensi BBM</h3>
+            <p id="fuel-hub-vehicle-name" class="text-xs text-slate-400">Honda Vario 160 CBS • L 4521 AB</p>
+          </div>
+        </div>
+        <button onclick="App.closeModal('modal-fuel-hub')" class="p-1.5 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Overview Cards (4 Grid) -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+        <div class="p-3 bg-gradient-to-br from-blue-50 to-indigo-50/50 rounded-2xl border border-blue-100 text-center">
+          <p class="text-[10px] uppercase font-bold text-blue-600">Efisiensi Rata-rata</p>
+          <p id="fuel-hub-avg-efficiency" class="text-lg font-black text-slate-900 mt-0.5">44.4 KM/L</p>
+          <span id="fuel-hub-rating-badge" class="inline-block text-[10px] px-2 py-0.5 mt-1 rounded-full font-bold bg-emerald-100 text-emerald-800">Sangat Irit</span>
+        </div>
+        <div class="p-3 bg-slate-50 rounded-2xl border border-slate-100 text-center">
+          <p class="text-[10px] uppercase font-bold text-slate-400">Biaya / KM</p>
+          <p id="fuel-hub-cost-per-km" class="text-lg font-black text-slate-900 mt-0.5">Rp 281</p>
+          <span class="text-[10px] text-slate-400">Rupiah per KM</span>
+        </div>
+        <div class="p-3 bg-slate-50 rounded-2xl border border-slate-100 text-center">
+          <p class="text-[10px] uppercase font-bold text-slate-400">BBM Bulan Ini</p>
+          <p id="fuel-hub-monthly-liters" class="text-lg font-black text-slate-900 mt-0.5">7.04 L</p>
+          <span id="fuel-hub-monthly-cost" class="text-[10px] text-slate-500 font-semibold">Rp 88.000</span>
+        </div>
+        <div class="p-3 bg-slate-50 rounded-2xl border border-slate-100 text-center">
+          <p class="text-[10px] uppercase font-bold text-slate-400">Total Terisi</p>
+          <p id="fuel-hub-total-liters" class="text-lg font-black text-slate-900 mt-0.5">7.04 L</p>
+          <span id="fuel-hub-total-cost" class="text-[10px] text-slate-500 font-semibold">Rp 88.000</span>
+        </div>
+      </div>
+
+      <!-- Collapsible / Interactive Full-to-Full Calculator -->
+      <div class="bg-gradient-to-br from-slate-50 to-blue-50/30 rounded-2xl border border-blue-100/60 p-4 space-y-3">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <div class="w-7 h-7 rounded-lg bg-[#0B4F9C] text-white flex items-center justify-center text-xs shadow-2xs">
+              <i data-lucide="calculator" class="w-4 h-4"></i>
+            </div>
+            <div>
+              <h4 class="text-xs font-bold text-slate-900">Kalkulator Full-to-Full Instan</h4>
+              <p class="text-[10px] text-slate-500">Hitung efisiensi perjalananmu sekarang</p>
+            </div>
+          </div>
+          <button type="button" onclick="App.toggleFuelCalculator()" class="text-xs font-bold text-[#0B4F9C] hover:underline">
+            <span id="calc-toggle-text">Tutup</span>
+          </button>
+        </div>
+
+        <div id="fuel-calc-body" class="space-y-3">
+          <div class="grid grid-cols-3 gap-2">
+            <div>
+              <label class="text-[10px] font-semibold text-slate-600">Odo Awal (KM)</label>
+              <input type="number" id="calc-odo-start" placeholder="14090"
+                class="w-full mt-0.5 p-2 text-xs rounded-xl bg-white border border-slate-200">
+            </div>
+            <div>
+              <label class="text-[10px] font-semibold text-slate-600">Odo Baru (KM)</label>
+              <input type="number" id="calc-odo-end" placeholder="14250"
+                class="w-full mt-0.5 p-2 text-xs rounded-xl bg-white border border-slate-200">
+            </div>
+            <div>
+              <label class="text-[10px] font-semibold text-slate-600">Liter (L)</label>
+              <input type="number" id="calc-liters" step="0.01" placeholder="3.6"
+                class="w-full mt-0.5 p-2 text-xs rounded-xl bg-white border border-slate-200">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="text-[10px] font-semibold text-slate-600">Total Biaya (Opsional)</label>
+              <input type="number" id="calc-cost" placeholder="45000"
+                class="w-full mt-0.5 p-2 text-xs rounded-xl bg-white border border-slate-200">
+            </div>
+            <div class="flex items-end">
+              <button type="button" onclick="App.calculateFuelEfficiencyManual()"
+                class="w-full py-2 rounded-xl bg-[#0B4F9C] text-white text-xs font-bold hover:bg-[#0A3981] transition-colors shadow-2xs">
+                Hitung Sekarang
+              </button>
+            </div>
+          </div>
+
+          <div id="calc-result-box" class="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-center hidden">
+            <p class="text-xs font-semibold text-emerald-800">
+              Hasil: <span id="calc-result-kml" class="font-extrabold text-sm">44.4 KM/L</span>
+              <span id="calc-result-extra" class="text-[11px] text-emerald-700 font-medium ml-1"></span>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Refueling History List -->
+      <div class="space-y-2">
+        <div class="flex items-center justify-between px-0.5">
+          <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400">Riwayat Pengisian Terakhir</h4>
+          <span id="fuel-log-count" class="text-[11px] font-bold text-slate-500">2 Catatan</span>
+        </div>
+        <div id="fuel-history-list" class="space-y-2 max-h-60 overflow-y-auto pr-1">
+          <!-- Populated by App.js -->
+        </div>
+      </div>
+
+      <!-- Action Footer -->
+      <div class="flex items-center space-x-2 pt-2 border-t border-slate-100">
+        <button type="button" onclick="App.closeModal('modal-fuel-hub')"
+          class="flex-1 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50">
+          Tutup
+        </button>
+        <button type="button" onclick="App.closeModal('modal-fuel-hub'); App.openQuickFuelModal();"
+          class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-[#0A3981] to-[#0B4F9C] text-white text-xs font-bold shadow-md flex items-center justify-center gap-1.5 active:scale-98">
+          <i data-lucide="plus" class="w-4 h-4"></i>
+          <span>Catat Isi Bensin</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 12: Quick Catat Pengisian Bensin -->
+  <div id="modal-quick-fuel" class="modal-backdrop fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 hidden">
+    <div class="w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl p-5 shadow-2xl animate-fade-in space-y-4 max-h-[92vh] overflow-y-auto">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+        <div class="flex items-center gap-2.5">
+          <div class="w-10 h-10 rounded-2xl bg-blue-50 text-[#0B4F9C] flex items-center justify-center shadow-2xs">
+            <i data-lucide="fuel" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-slate-900">Catat Pengisian Bensin (BBM)</h3>
+            <p class="text-[11px] text-slate-400">Pencatatan cepat saat di SPBU</p>
+          </div>
+        </div>
+        <button onclick="App.closeModal('modal-quick-fuel')" class="text-slate-400 hover:text-slate-700">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form id="quick-fuel-form" onsubmit="App.submitQuickFuelForm(event)" class="space-y-3">
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-xs font-semibold text-slate-700">Tanggal Pengisian</label>
+            <input type="date" id="qfuel-date" required
+              class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200">
+          </div>
+          <div>
+            <label class="text-xs font-semibold text-slate-700">Odometer Terkini (KM)</label>
+            <input type="number" id="qfuel-odometer" required placeholder="14250"
+              class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200 font-bold">
+            <span id="qfuel-last-odo-hint" class="text-[10px] text-slate-400 block mt-0.5 truncate">Terakhir: 14.250 KM</span>
+          </div>
+        </div>
+
+        <div>
+          <label class="text-xs font-semibold text-slate-700">Jenis Bahan Bakar</label>
+          <select id="qfuel-fuel-type" onchange="App.handleFuelTypeChange()"
+            class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200 font-semibold">
+            <option value="Pertamax" data-price="12500">Pertamax (RON 92) - Rp 12.500/L</option>
+            <option value="Pertalite" data-price="10000">Pertalite (RON 90) - Rp 10.000/L</option>
+            <option value="Pertamax Turbo" data-price="14400">Pertamax Turbo (RON 98) - Rp 14.400/L</option>
+            <option value="Dexlite" data-price="14500">Dexlite (Diesel) - Rp 14.500/L</option>
+            <option value="Pertamina Dex" data-price="15100">Pertamina Dex - Rp 15.100/L</option>
+            <option value="Shell Super" data-price="12700">Shell Super (RON 92) - Rp 12.700/L</option>
+            <option value="Shell V-Power" data-price="14500">Shell V-Power (RON 95) - Rp 14.500/L</option>
+            <option value="BP 92" data-price="12500">BP 92 - Rp 12.500/L</option>
+            <option value="Lainnya" data-price="0">Lainnya / Manual</option>
+          </select>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-xs font-semibold text-slate-700">Total Bayar (Rp)</label>
+            <input type="number" id="qfuel-amount" placeholder="45000" required min="1000"
+              oninput="App.syncFuelAmountToLiters()"
+              class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200 font-black text-slate-900">
+          </div>
+          <div>
+            <label class="text-xs font-semibold text-slate-700">Jumlah Liter (L)</label>
+            <input type="number" id="qfuel-liters" placeholder="3.6" step="0.01" required min="0.1"
+              oninput="App.syncFuelLitersToAmount()"
+              class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200 font-bold text-blue-700">
+          </div>
+        </div>
+
+        <div>
+          <label class="text-xs font-semibold text-slate-700">Nama SPBU / Lokasi</label>
+          <input type="text" id="qfuel-station" placeholder="Contoh: SPBU Pertamina Merr Rungkut / Shell Sutorejo"
+            class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200">
+        </div>
+
+        <div class="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200/80">
+          <div>
+            <p class="text-xs font-bold text-slate-800">Isi Tangki Penuh (Full Tank)</p>
+            <p class="text-[10px] text-slate-500">Diperlukan untuk akurasi hitung KM/L yang tepat</p>
+          </div>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" id="qfuel-full-tank" checked class="sr-only peer">
+            <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#0B4F9C]"></div>
+          </label>
+        </div>
+
+        <!-- Optional Photo Receipt -->
+        <div>
+          <label class="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+            <i data-lucide="camera" class="w-3.5 h-3.5 text-blue-600"></i> Foto Struk SPBU (Opsional)
+          </label>
+          <input type="file" id="qfuel-photo" accept="image/*"
+            class="w-full mt-1 text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-[#0B4F9C] hover:file:bg-blue-100">
+        </div>
+
+        <div>
+          <label class="text-xs font-semibold text-slate-700">Catatan Tambahan</label>
+          <input type="text" id="qfuel-notes" placeholder="Contoh: Bensin luar kota / mudik"
+            class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200">
+        </div>
+
+        <div class="flex items-center space-x-2 pt-2">
+          <button type="button" onclick="App.closeModal('modal-quick-fuel')"
+            class="flex-1 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50">
+            Batal
+          </button>
+          <button type="submit"
+            class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-[#0A3981] to-[#0B4F9C] text-white text-xs font-bold shadow-md active:scale-98">
+            Simpan Pengisian BBM
+          </button>
+        </div>
+      </form>
     </div>
   </div>
 
