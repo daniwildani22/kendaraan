@@ -1056,6 +1056,7 @@ const App = (function () {
     let html = "";
     state.vehicles.forEach((v) => {
       const isCurrent = v.id === state.activeVehicleId;
+      const canDelete = state.vehicles.length > 1;
       html += `
         <div class="bg-white rounded-2xl p-4 border ${isCurrent ? "border-emerald-500 bg-emerald-50/20" : "border-slate-100"} shadow-sm flex items-center justify-between gap-3">
           <div class="flex items-center space-x-3">
@@ -1073,12 +1074,42 @@ const App = (function () {
                 ? `<span class="text-xs font-semibold text-emerald-800 bg-emerald-100 px-2.5 py-1 rounded-full">Aktif</span>`
                 : `<button onclick="App.switchVehicle('${v.id}')" class="text-xs font-medium text-slate-600 hover:text-emerald-700 px-2.5 py-1 rounded-full border border-slate-200 bg-white">Pilih</button>`
             }
+            ${
+              canDelete
+                ? `<button onclick="App.deleteVehicleConfirm('${v.id}', '${Utils.escapeHTML(v.name)}')" title="Hapus Kendaraan" class="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                  </button>`
+                : ""
+            }
           </div>
         </div>
       `;
     });
 
     container.innerHTML = html;
+    if (window.lucide) lucide.createIcons();
+  }
+
+  async function deleteVehicleConfirm(id, name) {
+    if (state.vehicles.length <= 1) {
+      showToast("Minimal harus ada satu kendaraan di aplikasi", "error");
+      return;
+    }
+    const confirmed = confirm(`Hapus kendaraan "${name}" beserta seluruh riwayatnya?`);
+    if (!confirmed) return;
+
+    try {
+      await KendaraAPI.deleteVehicle(id);
+      if (state.activeVehicleId === id) {
+        const remaining = state.vehicles.filter((v) => v.id !== id);
+        state.activeVehicleId = remaining[0] ? remaining[0].id : null;
+        KendaraAPI.setActiveVehicleId(state.activeVehicleId);
+      }
+      await refreshData();
+      showToast(`Kendaraan "${name}" berhasil dihapus`, "success");
+    } catch (err) {
+      showToast("Gagal menghapus kendaraan: " + err.message, "error");
+    }
   }
 
   function renderDatabaseSettingsForm() {
@@ -3054,7 +3085,6 @@ const App = (function () {
     }
 
     const newVehicle = {
-      id: "veh-" + Date.now(),
       name,
       model: name,
       brand: name.split(" ")[0] || "Kendaraan",
@@ -3068,23 +3098,29 @@ const App = (function () {
       last_oil_odometer: km,
       last_oil_date: new Date().toISOString().split("T")[0],
       last_oil_brand: "Oli Rekomendasi",
-      tax_annual_date: taxAnnual || "",
-      tax_5year_date: tax5Year || "",
+      tax_annual_date: taxAnnual || null,
+      tax_5year_date: tax5Year || null,
       sim_type: simType,
-      sim_expiry_date: simExpiry || "",
+      sim_expiry_date: simExpiry || null,
       photo_vehicle: photoVeh,
       photo_sim: photoSim,
       photo_stnk: photoStnk,
       photo_bpkb: photoBpkb
     };
 
-    await KendaraAPI.saveVehicle(newVehicle);
-    state.activeVehicleId = newVehicle.id;
-    KendaraAPI.setActiveVehicleId(newVehicle.id);
+    try {
+      const saved = await KendaraAPI.saveVehicle(newVehicle);
+      const activeId = (saved && saved.id) ? saved.id : newVehicle.id;
+      state.activeVehicleId = activeId;
+      KendaraAPI.setActiveVehicleId(activeId);
 
-    closeModal("modal-add-vehicle");
-    await refreshData();
-    showToast(`Kendaraan ${name} berhasil ditambahkan!`, "success");
+      closeModal("modal-add-vehicle");
+      await refreshData();
+      showToast(`Kendaraan ${name} berhasil ditambahkan!`, "success");
+    } catch (err) {
+      console.error("Gagal menambah kendaraan:", err);
+      showToast("Gagal menambah kendaraan: " + (err.message || err), "error");
+    }
   }
 
   // Modal helpers
@@ -3677,6 +3713,7 @@ const App = (function () {
     submitPayScheduleForm,
     openAddVehicleModal,
     submitAddVehicleForm,
+    deleteVehicleConfirm,
     openModal,
     closeModal,
     showToast,

@@ -34,6 +34,22 @@ const KendaraAPI = (function () {
 
   const globalDefaults = (typeof window !== "undefined" && window.APP_CONFIG) || {};
 
+  function generateUUID() {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+      return crypto.randomUUID();
+    }
+    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+      const r = (Math.random() * 16) | 0;
+      const v = c === "x" ? r : (r & 0x3) | 0x8;
+      return v.toString(16);
+    });
+  }
+
+  function isValidUUID(str) {
+    if (!str || typeof str !== "string") return false;
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str.trim());
+  }
+
   // Default configuration (initialized from global APP_CONFIG or local defaults)
   let config = {
     provider: globalDefaults.DEFAULT_PROVIDER || "LOCAL_DEMO",
@@ -148,7 +164,7 @@ const KendaraAPI = (function () {
       if (existingIdx >= 0) {
         vehicles[existingIdx] = { ...vehicles[existingIdx], ...vehicle };
       } else {
-        vehicle.id = vehicle.id || "veh-" + Date.now();
+        vehicle.id = vehicle.id || generateUUID();
         vehicles.push(vehicle);
       }
       localStorage.setItem(STORAGE_KEYS.VEHICLES, JSON.stringify(vehicles));
@@ -184,7 +200,7 @@ const KendaraAPI = (function () {
 
     async addTransaction(tx) {
       const list = await this.getTransactions();
-      tx.id = tx.id || "tx-" + Date.now();
+      tx.id = tx.id || generateUUID();
       tx.created_at = tx.created_at || new Date().toISOString();
       list.unshift(tx);
       localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(list));
@@ -231,7 +247,7 @@ const KendaraAPI = (function () {
 
     async addMaintenanceLog(log) {
       const list = await this.getMaintenanceLogs();
-      log.id = log.id || "mnt-" + Date.now();
+      log.id = log.id || generateUUID();
       list.unshift(log);
       localStorage.setItem(STORAGE_KEYS.MAINTENANCE, JSON.stringify(list));
 
@@ -272,7 +288,7 @@ const KendaraAPI = (function () {
 
     async addSchedule(sch) {
       const list = await this.getSchedules();
-      sch.id = sch.id || "sch-" + Date.now();
+      sch.id = sch.id || generateUUID();
       sch.is_completed = false;
       sch.completed_at = null;
       list.push(sch);
@@ -352,7 +368,7 @@ const KendaraAPI = (function () {
         }
 
         nextSchedule = {
-          id: "sch-" + Date.now(),
+          id: generateUUID(),
           vehicle_id: sch.vehicle_id,
           title: sch.title,
           category: sch.category,
@@ -656,18 +672,60 @@ const KendaraAPI = (function () {
 
     async saveVehicle(vehicle) {
       const user = (typeof KendaraAuth !== "undefined") ? KendaraAuth.getUser() : null;
-      if (user && user.id && user.provider === "supabase" && !vehicle.user_id) {
-        vehicle.user_id = user.id;
+      const payload = { ...vehicle };
+      if (user && user.id && user.provider === "supabase" && !payload.user_id) {
+        payload.user_id = user.id;
       }
+
+      // Pastikan format UUID valid untuk PostgreSQL
+      if (!isValidUUID(payload.id)) {
+        payload.id = generateUUID();
+        vehicle.id = payload.id;
+      }
+
+      // Kolom DATE PostgreSQL menolak string kosong "". Ubah menjadi null.
+      payload.tax_annual_date = payload.tax_annual_date ? payload.tax_annual_date : null;
+      payload.tax_5year_date = payload.tax_5year_date ? payload.tax_5year_date : null;
+      payload.sim_expiry_date = payload.sim_expiry_date ? payload.sim_expiry_date : null;
+      payload.last_oil_date = payload.last_oil_date ? payload.last_oil_date : null;
+
+      // Sanitasi angka
+      if (payload.year !== undefined && payload.year !== null && payload.year !== "") {
+        payload.year = parseInt(payload.year, 10) || null;
+      } else {
+        payload.year = null;
+      }
+      if (payload.current_odometer !== undefined && payload.current_odometer !== null) {
+        payload.current_odometer = Number(payload.current_odometer) || 0;
+      }
+      if (payload.oil_interval_km !== undefined && payload.oil_interval_km !== null) {
+        payload.oil_interval_km = parseInt(payload.oil_interval_km, 10) || 3000;
+      }
+      if (payload.oil_interval_months !== undefined && payload.oil_interval_months !== null) {
+        payload.oil_interval_months = parseInt(payload.oil_interval_months, 10) || 2;
+      }
+      if (payload.last_oil_odometer !== undefined && payload.last_oil_odometer !== null) {
+        payload.last_oil_odometer = Number(payload.last_oil_odometer) || 0;
+      }
+      if (payload.fuel_tank_capacity !== undefined && payload.fuel_tank_capacity !== null && payload.fuel_tank_capacity !== "") {
+        payload.fuel_tank_capacity = Number(payload.fuel_tank_capacity);
+      } else {
+        payload.fuel_tank_capacity = null;
+      }
+
       try {
         const res = await this.fetchSupabase("vehicles", {
           method: "POST",
           headers: { Prefer: "resolution=merge-duplicates,return=representation" },
-          body: JSON.stringify(vehicle)
+          body: JSON.stringify(payload)
         });
-        return res[0];
+        const saved = (res && res[0]) ? res[0] : payload;
+        vehicle.id = saved.id;
+        await LocalAdapter.saveVehicle(saved);
+        return saved;
       } catch (e) {
-        return LocalAdapter.saveVehicle(vehicle);
+        console.error("SupabaseAdapter.saveVehicle failed:", e);
+        throw e;
       }
     },
 
@@ -709,29 +767,70 @@ const KendaraAPI = (function () {
 
     async addTransaction(tx) {
       const user = (typeof KendaraAuth !== "undefined") ? KendaraAuth.getUser() : null;
-      if (user && user.id && user.provider === "supabase" && !tx.user_id) {
-        tx.user_id = user.id;
+      const payload = { ...tx };
+      if (user && user.id && user.provider === "supabase" && !payload.user_id) {
+        payload.user_id = user.id;
       }
+      if (!isValidUUID(payload.id)) {
+        payload.id = generateUUID();
+        tx.id = payload.id;
+      }
+      payload.date = payload.date ? payload.date : new Date().toISOString().split("T")[0];
+      payload.amount = Number(payload.amount) || 0;
+      if (payload.odometer !== undefined && payload.odometer !== null && payload.odometer !== "") {
+        payload.odometer = Number(payload.odometer);
+      } else {
+        payload.odometer = null;
+      }
+      if (payload.fuel_liters !== undefined && payload.fuel_liters !== null && payload.fuel_liters !== "") {
+        payload.fuel_liters = Number(payload.fuel_liters);
+      } else {
+        payload.fuel_liters = null;
+      }
+      if (payload.fuel_price_per_liter !== undefined && payload.fuel_price_per_liter !== null && payload.fuel_price_per_liter !== "") {
+        payload.fuel_price_per_liter = Number(payload.fuel_price_per_liter);
+      } else {
+        payload.fuel_price_per_liter = null;
+      }
+
       try {
         const res = await this.fetchSupabase("transactions", {
           method: "POST",
-          body: JSON.stringify(tx)
+          headers: { Prefer: "return=representation" },
+          body: JSON.stringify(payload)
         });
-        return res[0];
+        const saved = (res && res[0]) ? res[0] : payload;
+        tx.id = saved.id;
+        await LocalAdapter.addTransaction(saved);
+        return saved;
       } catch (e) {
-        return LocalAdapter.addTransaction(tx);
+        console.error("SupabaseAdapter.addTransaction failed:", e);
+        throw e;
       }
     },
 
     async updateTransaction(tx) {
+      const payload = { ...tx };
+      if (payload.odometer !== undefined && payload.odometer !== null && payload.odometer !== "") {
+        payload.odometer = Number(payload.odometer);
+      } else if (payload.odometer === "") {
+        payload.odometer = null;
+      }
+      if (payload.fuel_liters === "") payload.fuel_liters = null;
+      if (payload.fuel_price_per_liter === "") payload.fuel_price_per_liter = null;
+
       try {
         const res = await this.fetchSupabase(`transactions?id=eq.${tx.id}`, {
           method: "PATCH",
-          body: JSON.stringify(tx)
+          headers: { Prefer: "return=representation" },
+          body: JSON.stringify(payload)
         });
-        return res[0];
+        const saved = (res && res[0]) ? res[0] : payload;
+        await LocalAdapter.updateTransaction(saved);
+        return saved;
       } catch (e) {
-        return LocalAdapter.updateTransaction(tx);
+        console.error("SupabaseAdapter.updateTransaction failed:", e);
+        throw e;
       }
     },
 
@@ -761,17 +860,45 @@ const KendaraAPI = (function () {
 
     async addMaintenanceLog(log) {
       const user = (typeof KendaraAuth !== "undefined") ? KendaraAuth.getUser() : null;
-      if (user && user.id && user.provider === "supabase" && !log.user_id) {
-        log.user_id = user.id;
+      const payload = { ...log };
+      if (user && user.id && user.provider === "supabase" && !payload.user_id) {
+        payload.user_id = user.id;
       }
+      if (!isValidUUID(payload.id)) {
+        payload.id = generateUUID();
+        log.id = payload.id;
+      }
+      payload.date = payload.date ? payload.date : new Date().toISOString().split("T")[0];
+      payload.cost = Number(payload.cost) || 0;
+      if (payload.odometer !== undefined && payload.odometer !== null && payload.odometer !== "") {
+        payload.odometer = Number(payload.odometer);
+      } else {
+        payload.odometer = null;
+      }
+      if (payload.workshop_lat !== undefined && payload.workshop_lat !== null && payload.workshop_lat !== "") {
+        payload.workshop_lat = Number(payload.workshop_lat);
+      } else {
+        payload.workshop_lat = null;
+      }
+      if (payload.workshop_lng !== undefined && payload.workshop_lng !== null && payload.workshop_lng !== "") {
+        payload.workshop_lng = Number(payload.workshop_lng);
+      } else {
+        payload.workshop_lng = null;
+      }
+
       try {
         const res = await this.fetchSupabase("maintenance_logs", {
           method: "POST",
-          body: JSON.stringify(log)
+          headers: { Prefer: "return=representation" },
+          body: JSON.stringify(payload)
         });
-        return res[0];
+        const saved = (res && res[0]) ? res[0] : payload;
+        log.id = saved.id;
+        await LocalAdapter.addMaintenanceLog(saved);
+        return saved;
       } catch (e) {
-        return LocalAdapter.addMaintenanceLog(log);
+        console.error("SupabaseAdapter.addMaintenanceLog failed:", e);
+        throw e;
       }
     },
 
@@ -801,29 +928,68 @@ const KendaraAPI = (function () {
 
     async addSchedule(sch) {
       const user = (typeof KendaraAuth !== "undefined") ? KendaraAuth.getUser() : null;
-      if (user && user.id && user.provider === "supabase" && !sch.user_id) {
-        sch.user_id = user.id;
+      const payload = { ...sch };
+      if (user && user.id && user.provider === "supabase" && !payload.user_id) {
+        payload.user_id = user.id;
       }
+      if (!isValidUUID(payload.id)) {
+        payload.id = generateUUID();
+        sch.id = payload.id;
+      }
+      payload.due_date = payload.due_date ? payload.due_date : new Date().toISOString().split("T")[0];
+      payload.completed_at = payload.completed_at ? payload.completed_at : null;
+      payload.est_cost = Number(payload.est_cost) || 0;
+      if (payload.target_odometer !== undefined && payload.target_odometer !== null && payload.target_odometer !== "") {
+        payload.target_odometer = Number(payload.target_odometer);
+      } else {
+        payload.target_odometer = null;
+      }
+      if (payload.recurring_interval_months !== undefined && payload.recurring_interval_months !== null && payload.recurring_interval_months !== "") {
+        payload.recurring_interval_months = parseInt(payload.recurring_interval_months, 10);
+      } else {
+        payload.recurring_interval_months = 12;
+      }
+      if (payload.recurring_interval_km !== undefined && payload.recurring_interval_km !== null && payload.recurring_interval_km !== "") {
+        payload.recurring_interval_km = parseInt(payload.recurring_interval_km, 10);
+      } else {
+        payload.recurring_interval_km = null;
+      }
+
       try {
         const res = await this.fetchSupabase("schedules", {
           method: "POST",
-          body: JSON.stringify(sch)
+          headers: { Prefer: "return=representation" },
+          body: JSON.stringify(payload)
         });
-        return res[0];
+        const saved = (res && res[0]) ? res[0] : payload;
+        sch.id = saved.id;
+        await LocalAdapter.addSchedule(saved);
+        return saved;
       } catch (e) {
-        return LocalAdapter.addSchedule(sch);
+        console.error("SupabaseAdapter.addSchedule failed:", e);
+        throw e;
       }
     },
 
     async updateSchedule(sch) {
+      const payload = { ...sch };
+      if (payload.due_date === "") payload.due_date = new Date().toISOString().split("T")[0];
+      if (payload.completed_at === "") payload.completed_at = null;
+      if (payload.target_odometer === "") payload.target_odometer = null;
+      if (payload.recurring_interval_km === "") payload.recurring_interval_km = null;
+
       try {
         const res = await this.fetchSupabase(`schedules?id=eq.${sch.id}`, {
           method: "PATCH",
-          body: JSON.stringify(sch)
+          headers: { Prefer: "return=representation" },
+          body: JSON.stringify(payload)
         });
-        return res[0];
+        const saved = (res && res[0]) ? res[0] : payload;
+        await LocalAdapter.updateSchedule(saved);
+        return saved;
       } catch (e) {
-        return LocalAdapter.updateSchedule(sch);
+        console.error("SupabaseAdapter.updateSchedule failed:", e);
+        throw e;
       }
     },
 
@@ -837,7 +1003,22 @@ const KendaraAPI = (function () {
     },
 
     async completeSchedule(id, paymentData = null) {
-      return LocalAdapter.completeSchedule(id, paymentData);
+      const res = await LocalAdapter.completeSchedule(id, paymentData);
+      try {
+        await this.fetchSupabase(`schedules?id=eq.${id}`, {
+          method: "PATCH",
+          body: JSON.stringify({ is_completed: true, completed_at: new Date().toISOString() })
+        });
+        if (res && res.nextSchedule) {
+          await this.addSchedule(res.nextSchedule);
+        }
+        if (res && res.txRecord) {
+          await this.addTransaction(res.txRecord);
+        }
+      } catch (e) {
+        console.warn("Supabase completeSchedule sync warning:", e);
+      }
+      return res;
     }
   };
 
