@@ -28,6 +28,7 @@ const KendaraAPI = (function () {
     get TRANSACTIONS() { return getStorageKey("transactions"); },
     get MAINTENANCE() { return getStorageKey("maintenance"); },
     get SCHEDULES() { return getStorageKey("schedules"); },
+    get TRIPS() { return getStorageKey("trips"); },
     get ACTIVE_VEHICLE() { return getStorageKey("active_vehicle"); }
   };
 
@@ -116,12 +117,14 @@ const KendaraAPI = (function () {
         localStorage.setItem("kendaratrack_demo_transactions", localStorage.getItem("kendaratrack_transactions") || JSON.stringify(SEED_TRANSACTIONS));
         localStorage.setItem("kendaratrack_demo_maintenance", localStorage.getItem("kendaratrack_maintenance") || JSON.stringify(SEED_MAINTENANCE_LOGS));
         localStorage.setItem("kendaratrack_demo_schedules", localStorage.getItem("kendaratrack_schedules") || JSON.stringify(SEED_SCHEDULES));
+        localStorage.setItem("kendaratrack_demo_trips", JSON.stringify(window.SEED_TRIPS || []));
         localStorage.setItem("kendaratrack_demo_active_vehicle", localStorage.getItem("kendaratrack_active_vehicle_id") || "veh-001");
       } else {
         localStorage.setItem(demoVehiclesKey, JSON.stringify(SEED_VEHICLES));
         localStorage.setItem("kendaratrack_demo_transactions", JSON.stringify(SEED_TRANSACTIONS));
         localStorage.setItem("kendaratrack_demo_maintenance", JSON.stringify(SEED_MAINTENANCE_LOGS));
         localStorage.setItem("kendaratrack_demo_schedules", JSON.stringify(SEED_SCHEDULES));
+        localStorage.setItem("kendaratrack_demo_trips", JSON.stringify(window.SEED_TRIPS || []));
         localStorage.setItem("kendaratrack_demo_active_vehicle", "veh-001");
       }
     }
@@ -368,6 +371,35 @@ const KendaraAPI = (function () {
 
       localStorage.setItem(STORAGE_KEYS.SCHEDULES, JSON.stringify(schedules));
       return { completedSchedule: sch, nextSchedule, txRecord };
+    },
+
+    async getTrips(vehicleId = null) {
+      const data = localStorage.getItem(STORAGE_KEYS.TRIPS);
+      let list = data ? JSON.parse(data) : (window.SEED_TRIPS || []);
+      if (vehicleId) {
+        list = list.filter((t) => t.vehicle_id === vehicleId);
+      }
+      return list.sort((a, b) => new Date(b.date + "T" + (b.start_time || "00:00")) - new Date(a.date + "T" + (a.start_time || "00:00")));
+    },
+
+    async saveTrip(trip) {
+      const list = await this.getTrips();
+      trip.id = trip.id || "trip-" + Date.now();
+      const existingIdx = list.findIndex((t) => t.id === trip.id);
+      if (existingIdx >= 0) {
+        list[existingIdx] = { ...list[existingIdx], ...trip };
+      } else {
+        list.unshift(trip);
+      }
+      localStorage.setItem(STORAGE_KEYS.TRIPS, JSON.stringify(list));
+      return trip;
+    },
+
+    async deleteTrip(id) {
+      let list = await this.getTrips();
+      list = list.filter((t) => t.id !== id);
+      localStorage.setItem(STORAGE_KEYS.TRIPS, JSON.stringify(list));
+      return true;
     }
   };
 
@@ -852,12 +884,14 @@ const KendaraAPI = (function () {
         localStorage.setItem("kendaratrack_demo_transactions", JSON.stringify(SEED_TRANSACTIONS));
         localStorage.setItem("kendaratrack_demo_maintenance", JSON.stringify(SEED_MAINTENANCE_LOGS));
         localStorage.setItem("kendaratrack_demo_schedules", JSON.stringify(SEED_SCHEDULES));
+        localStorage.setItem("kendaratrack_demo_trips", JSON.stringify(window.SEED_TRIPS || []));
         localStorage.setItem("kendaratrack_demo_active_vehicle", "veh-001");
       } else {
         localStorage.removeItem(STORAGE_KEYS.VEHICLES);
         localStorage.removeItem(STORAGE_KEYS.TRANSACTIONS);
         localStorage.removeItem(STORAGE_KEYS.MAINTENANCE);
         localStorage.removeItem(STORAGE_KEYS.SCHEDULES);
+        localStorage.removeItem(STORAGE_KEYS.TRIPS);
         localStorage.removeItem(STORAGE_KEYS.ACTIVE_VEHICLE);
       }
       return true;
@@ -934,6 +968,25 @@ const KendaraAPI = (function () {
 
     completeSchedule(id, paymentData = null) {
       return getAdapter().completeSchedule(id, paymentData);
+    },
+
+    // Fleet Tracking (GPS Trips & Visits)
+    getTrips(vehicleId = null) {
+      const adapter = getAdapter();
+      if (adapter.getTrips) return adapter.getTrips(vehicleId);
+      return LocalAdapter.getTrips(vehicleId);
+    },
+
+    saveTrip(trip) {
+      const adapter = getAdapter();
+      if (adapter.saveTrip) return adapter.saveTrip(trip);
+      return LocalAdapter.saveTrip(trip);
+    },
+
+    deleteTrip(id) {
+      const adapter = getAdapter();
+      if (adapter.deleteTrip) return adapter.deleteTrip(id);
+      return LocalAdapter.deleteTrip(id);
     },
 
     // Test API Connection

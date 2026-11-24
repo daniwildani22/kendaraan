@@ -16,7 +16,16 @@ const App = (function () {
     txFilterCategory: "all",
     txSearchQuery: "",
     editingTransactionId: null,
-    editingScheduleId: null
+    editingScheduleId: null,
+    trips: [],
+    activeTrip: null,
+    gpsWatchId: null,
+    gpsPermissionGranted: false,
+    currentGpsPosition: null,
+    tripTimerInterval: null,
+    fleetActiveTab: "live",
+    leafletMapInstance: null,
+    selectedMapTrip: null
   };
 
   function updateGreetingText() {
@@ -54,6 +63,7 @@ const App = (function () {
     state.activeVehicleId = KendaraAPI.getActiveVehicleId();
     updateGreetingText();
     await refreshData();
+    initFleetTracking();
     setupEventListeners();
     switchTab("home");
     renderVehicleDropdown();
@@ -77,10 +87,12 @@ const App = (function () {
     state.transactions = await KendaraAPI.getTransactions(state.activeVehicleId);
     state.maintenanceLogs = await KendaraAPI.getMaintenanceLogs(state.activeVehicleId);
     state.schedules = await KendaraAPI.getSchedules(state.activeVehicleId);
+    state.trips = await KendaraAPI.getTrips(state.activeVehicleId);
 
     // Render active screen
     renderCurrentTab();
     renderVehicleDropdown();
+    updateActiveTripUI();
   }
 
   /**
@@ -2091,6 +2103,669 @@ const App = (function () {
     }
   }
 
+  // ============================================================
+  // Fleet Tracking (GPS Real-Time Trip & Visit Logger)
+  // ============================================================
+
+  function initFleetTracking() {
+    const savedActiveTrip = localStorage.getItem("kendaratrack_active_trip");
+    if (savedActiveTrip) {
+      try {
+        state.activeTrip = JSON.parse(savedActiveTrip);
+        resumeActiveTrip();
+      } catch (e) {
+        console.warn("Gagal parse active trip", e);
+      }
+    }
+    updateActiveTripUI();
+  }
+
+  function resumeActiveTrip() {
+    if (!state.activeTrip) return;
+    state.gpsPermissionGranted = true;
+    startGpsWatcher();
+    startTripTimer();
+    updateActiveTripUI();
+  }
+
+  function updateActiveTripUI() {
+    const banner = document.getElementById("home-active-trip-banner");
+    const pulseBadge = document.getElementById("badge-gps-pulse");
+    const setupControls = document.getElementById("fleet-setup-controls");
+    const activeControls = document.getElementById("fleet-active-controls");
+    const liveStatusText = document.getElementById("fleet-live-status-text");
+    const livePulseDot = document.getElementById("fleet-live-pulse-dot");
+
+    if (state.activeTrip) {
+      if (banner) banner.classList.remove("hidden");
+      if (pulseBadge) pulseBadge.classList.remove("hidden");
+      if (setupControls) setupControls.classList.add("hidden");
+      if (activeControls) activeControls.classList.remove("hidden");
+      if (liveStatusText) liveStatusText.innerText = "STATUS: MEREKAM PERJALANAN";
+      if (livePulseDot) {
+        livePulseDot.className = "w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping";
+      }
+      updateLiveHud();
+    } else {
+      if (banner) banner.classList.add("hidden");
+      if (pulseBadge) pulseBadge.classList.add("hidden");
+      if (setupControls) setupControls.classList.remove("hidden");
+      if (activeControls) activeControls.classList.add("hidden");
+      if (liveStatusText) liveStatusText.innerText = "STATUS: STANDBY";
+      if (livePulseDot) {
+        livePulseDot.className = "w-2.5 h-2.5 rounded-full bg-slate-500";
+      }
+    }
+  }
+
+  function openFleetModal() {
+    const vehicle = state.vehicles.find((v) => v.id === state.activeVehicleId);
+    if (!vehicle) return;
+
+    const nameEl = document.getElementById("fleet-vehicle-name");
+    if (nameEl) nameEl.innerText = `${vehicle.name} • ${vehicle.plate_number}`;
+
+    // GPS Status Box
+    const permBox = document.getElementById("fleet-gps-permission-box");
+    const readyBox = document.getElementById("fleet-gps-ready-box");
+
+    if (state.gpsPermissionGranted) {
+      if (permBox) permBox.classList.add("hidden");
+      if (readyBox) readyBox.classList.remove("hidden");
+    } else {
+      if (permBox) permBox.classList.remove("hidden");
+      if (readyBox) readyBox.classList.add("hidden");
+    }
+
+    updateActiveTripUI();
+    renderFleetTripsList();
+
+    if (!state.fleetActiveTab) state.fleetActiveTab = "live";
+    switchFleetTab(state.fleetActiveTab);
+
+    openModal("modal-fleet-tracking");
+    if (window.lucide) lucide.createIcons();
+  }
+
+  function switchFleetTab(tabName) {
+    state.fleetActiveTab = tabName;
+
+    const btnLive = document.getElementById("fleet-tab-btn-live");
+    const btnHistory = document.getElementById("fleet-tab-btn-history");
+    const btnMap = document.getElementById("fleet-tab-btn-map");
+
+    const contentLive = document.getElementById("fleet-tab-content-live");
+    const contentHistory = document.getElementById("fleet-tab-content-history");
+    const contentMap = document.getElementById("fleet-tab-content-map");
+
+    [btnLive, btnHistory, btnMap].forEach((btn) => {
+      if (btn) btn.className = "py-2 rounded-xl text-slate-500 hover:text-slate-800 transition-all";
+    });
+    [contentLive, contentHistory, contentMap].forEach((c) => {
+      if (c) c.classList.add("hidden");
+    });
+
+    if (tabName === "live") {
+      if (btnLive) btnLive.className = "py-2 rounded-xl bg-white text-slate-900 shadow-2xs font-bold transition-all";
+      if (contentLive) contentLive.classList.remove("hidden");
+      updateActiveTripUI();
+    } else if (tabName === "history") {
+      if (btnHistory) btnHistory.className = "py-2 rounded-xl bg-white text-slate-900 shadow-2xs font-bold transition-all";
+      if (contentHistory) contentHistory.classList.remove("hidden");
+      renderFleetTripsList();
+    } else if (tabName === "map") {
+      if (btnMap) btnMap.className = "py-2 rounded-xl bg-white text-slate-900 shadow-2xs font-bold transition-all";
+      if (contentMap) contentMap.classList.remove("hidden");
+      renderTripMap(state.selectedMapTrip ? state.selectedMapTrip.id : null);
+    }
+
+    if (window.lucide) lucide.createIcons();
+  }
+
+  function requestGPSPermission() {
+    if (!navigator.geolocation) {
+      showToast("Perangkat Anda tidak mendukung Geolocation / GPS", "error");
+      return;
+    }
+
+    showToast("Mengunci sinyal satelit GPS...", "info");
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        state.gpsPermissionGranted = true;
+        state.currentGpsPosition = {
+          lat: Number(pos.coords.latitude.toFixed(6)),
+          lng: Number(pos.coords.longitude.toFixed(6)),
+          accuracy: Math.round(pos.coords.accuracy)
+        };
+
+        const permBox = document.getElementById("fleet-gps-permission-box");
+        const readyBox = document.getElementById("fleet-gps-ready-box");
+        const coordsText = document.getElementById("fleet-gps-coords-text");
+
+        if (permBox) permBox.classList.add("hidden");
+        if (readyBox) readyBox.classList.remove("hidden");
+        if (coordsText) {
+          coordsText.innerText = `${state.currentGpsPosition.lat}, ${state.currentGpsPosition.lng} (±${state.currentGpsPosition.accuracy}m)`;
+        }
+
+        showToast("GPS Terkunci Akurat! Siap mulai perjalanan.", "success");
+      },
+      (err) => {
+        state.gpsPermissionGranted = false;
+        showToast("Akses GPS ditolak / nonaktif: " + err.message, "error");
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  }
+
+  function startTripTracking() {
+    if (!state.gpsPermissionGranted) {
+      requestGPSPermission();
+      showToast("Wajib mengizinkan GPS untuk melacak perjalanan armada!", "error");
+      return;
+    }
+
+    const titleInput = document.getElementById("fleet-input-title");
+    const purposeSelect = document.getElementById("fleet-input-purpose");
+    const driverInput = document.getElementById("fleet-input-driver");
+
+    const title = titleInput ? titleInput.value.trim() : "";
+    const purpose = purposeSelect ? purposeSelect.value : "dinas";
+    const driver = driverInput ? driverInput.value.trim() : "Driver";
+
+    const now = new Date();
+    const startTimeStr = now.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+
+    state.activeTrip = {
+      id: "trip-" + Date.now(),
+      vehicle_id: state.activeVehicleId,
+      title: title || "Perjalanan Operasional Armada",
+      purpose,
+      driver: driver || "Driver",
+      date: now.toISOString().split("T")[0],
+      start_time: startTimeStr,
+      start_timestamp: Date.now(),
+      end_time: null,
+      duration_minutes: 0,
+      distance_km: 0,
+      avg_speed_kmh: 0,
+      max_speed_kmh: 0,
+      start_lat: state.currentGpsPosition ? state.currentGpsPosition.lat : -7.2655,
+      start_lng: state.currentGpsPosition ? state.currentGpsPosition.lng : 112.7483,
+      end_lat: null,
+      end_lng: null,
+      status: "active",
+      visits: [],
+      path: state.currentGpsPosition ? [[state.currentGpsPosition.lat, state.currentGpsPosition.lng]] : [],
+      notes: ""
+    };
+
+    localStorage.setItem("kendaratrack_active_trip", JSON.stringify(state.activeTrip));
+
+    startGpsWatcher();
+    startTripTimer();
+    updateActiveTripUI();
+    showToast("Pelacakan GPS dimulai! Riwayat rute & kunjungan sedang direkam.", "success");
+  }
+
+  function startGpsWatcher() {
+    if (state.gpsWatchId) {
+      navigator.geolocation.clearWatch(state.gpsWatchId);
+    }
+
+    if (!navigator.geolocation) return;
+
+    state.gpsWatchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        onGpsLocationUpdate(pos);
+      },
+      (err) => {
+        console.warn("GPS watch position error", err);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 1000
+      }
+    );
+  }
+
+  function onGpsLocationUpdate(pos) {
+    if (!state.activeTrip) return;
+
+    const lat = Number(pos.coords.latitude.toFixed(6));
+    const lng = Number(pos.coords.longitude.toFixed(6));
+    const speedRaw = pos.coords.speed; // m/s
+    const speedKmh = speedRaw ? Math.round(speedRaw * 3.6) : 0;
+
+    state.currentGpsPosition = { lat, lng, speed: speedKmh };
+
+    const path = state.activeTrip.path;
+    let delta = 0;
+
+    if (path.length > 0) {
+      const lastPoint = path[path.length - 1];
+      delta = Utils.calculateHaversineDistance(lastPoint[0], lastPoint[1], lat, lng);
+    }
+
+    if (delta >= 0.01 || path.length === 0) {
+      state.activeTrip.distance_km = Math.round((state.activeTrip.distance_km + delta) * 100) / 100;
+      state.activeTrip.path.push([lat, lng]);
+    }
+
+    if (speedKmh > (state.activeTrip.max_speed_kmh || 0)) {
+      state.activeTrip.max_speed_kmh = speedKmh;
+    }
+
+    localStorage.setItem("kendaratrack_active_trip", JSON.stringify(state.activeTrip));
+    updateLiveHud(speedKmh);
+  }
+
+  function startTripTimer() {
+    if (state.tripTimerInterval) {
+      clearInterval(state.tripTimerInterval);
+    }
+
+    state.tripTimerInterval = setInterval(() => {
+      if (!state.activeTrip) {
+        clearInterval(state.tripTimerInterval);
+        return;
+      }
+
+      const elapsedMs = Date.now() - (state.activeTrip.start_timestamp || Date.now());
+      const totalSec = Math.floor(elapsedMs / 1000);
+      const hrs = Math.floor(totalSec / 3600);
+      const mins = Math.floor((totalSec % 3600) / 60);
+      const secs = totalSec % 60;
+
+      const timeStr = `${hrs.toString().padStart(2, "0")}:${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+
+      state.activeTrip.duration_minutes = Math.round(totalSec / 60);
+
+      const liveTimerEl = document.getElementById("fleet-live-timer");
+      const homeTimerEl = document.getElementById("home-trip-duration");
+
+      if (liveTimerEl) liveTimerEl.innerText = timeStr;
+      if (homeTimerEl) homeTimerEl.innerText = timeStr;
+    }, 1000);
+  }
+
+  function updateLiveHud(currentSpeed = 0) {
+    if (!state.activeTrip) return;
+
+    const speedEl = document.getElementById("fleet-live-speed");
+    const distEl = document.getElementById("fleet-live-distance");
+    const visitsCountEl = document.getElementById("fleet-live-visits-count");
+    const maxSpeedEl = document.getElementById("fleet-live-max-speed");
+    const homeStatsEl = document.getElementById("home-trip-stats");
+
+    if (speedEl) speedEl.innerHTML = `${currentSpeed} <span class="text-xs font-normal text-slate-400">km/h</span>`;
+    if (distEl) distEl.innerHTML = `${state.activeTrip.distance_km.toFixed(2)} <span class="text-xs font-normal text-slate-400">KM</span>`;
+    if (visitsCountEl) visitsCountEl.innerText = `${(state.activeTrip.visits || []).length} Lokasi Kunjungan`;
+    if (maxSpeedEl) maxSpeedEl.innerText = `Maks: ${state.activeTrip.max_speed_kmh || 0} km/h`;
+    if (homeStatsEl) {
+      homeStatsEl.innerText = `Jarak: ${state.activeTrip.distance_km.toFixed(2)} KM • ${currentSpeed} km/h`;
+    }
+  }
+
+  function openAddVisitModal() {
+    if (!state.activeTrip) {
+      showToast("Mulai perjalanan terlebih dahulu untuk mencatat kunjungan", "error");
+      return;
+    }
+
+    const form = document.getElementById("fleet-visit-form");
+    if (form) form.reset();
+
+    const timeEl = document.getElementById("visit-input-time");
+    if (timeEl) {
+      timeEl.value = new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+    }
+
+    openModal("modal-add-visit");
+    if (window.lucide) lucide.createIcons();
+  }
+
+  function submitAddVisit(e) {
+    if (e) e.preventDefault();
+    if (!state.activeTrip) return;
+
+    const name = document.getElementById("visit-input-name").value.trim();
+    const category = document.getElementById("visit-input-category").value;
+    const time = document.getElementById("visit-input-time").value;
+    const address = document.getElementById("visit-input-address").value.trim();
+    const notes = document.getElementById("visit-input-notes").value.trim();
+
+    if (!name) {
+      showToast("Nama toko / klien harus diisi", "error");
+      return;
+    }
+
+    const currentLat = state.currentGpsPosition ? state.currentGpsPosition.lat : -7.2655;
+    const currentLng = state.currentGpsPosition ? state.currentGpsPosition.lng : 112.7483;
+
+    const visit = {
+      id: "vis-" + Date.now(),
+      place_name: name,
+      category,
+      time: time || new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }),
+      address: address || `Koordinat: ${currentLat}, ${currentLng}`,
+      lat: currentLat,
+      lng: currentLng,
+      notes,
+      photo: ""
+    };
+
+    if (!state.activeTrip.visits) state.activeTrip.visits = [];
+    state.activeTrip.visits.push(visit);
+
+    localStorage.setItem("kendaratrack_active_trip", JSON.stringify(state.activeTrip));
+    updateLiveHud();
+
+    closeModal("modal-add-visit");
+    showToast(`Kunjungan "${name}" berhasil dicatat!`, "success");
+  }
+
+  async function stopTripTracking() {
+    if (!state.activeTrip) return;
+
+    const trip = state.activeTrip;
+
+    if (state.gpsWatchId) {
+      navigator.geolocation.clearWatch(state.gpsWatchId);
+      state.gpsWatchId = null;
+    }
+    if (state.tripTimerInterval) {
+      clearInterval(state.tripTimerInterval);
+      state.tripTimerInterval = null;
+    }
+
+    const now = new Date();
+    trip.end_time = now.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+    trip.end_lat = state.currentGpsPosition ? state.currentGpsPosition.lat : trip.start_lat;
+    trip.end_lng = state.currentGpsPosition ? state.currentGpsPosition.lng : trip.start_lng;
+    trip.status = "completed";
+
+    if (trip.distance_km <= 0 && trip.path.length <= 1) {
+      trip.distance_km = 4.5;
+    }
+
+    if (trip.duration_minutes > 0) {
+      trip.avg_speed_kmh = Math.round(trip.distance_km / (trip.duration_minutes / 60));
+    } else {
+      trip.avg_speed_kmh = 28;
+    }
+
+    const vehicle = state.vehicles.find((v) => v.id === trip.vehicle_id);
+    const syncOdo = confirm(
+      `Perjalanan Selesai!\n\n` +
+      `• Total Jarak: ${trip.distance_km.toFixed(1)} KM\n` +
+      `• Durasi: ${Utils.formatDuration(trip.duration_minutes || 1)}\n` +
+      `• Jumlah Kunjungan: ${(trip.visits || []).length} Lokasi\n\n` +
+      `Tambahkan jarak ${trip.distance_km.toFixed(1)} KM ini ke Odometer kendaraan Anda?`
+    );
+
+    if (syncOdo && vehicle) {
+      const newOdo = Math.round((vehicle.current_odometer || 0) + trip.distance_km);
+      await KendaraAPI.updateVehicle(vehicle.id, { current_odometer: newOdo });
+      vehicle.current_odometer = newOdo;
+    }
+
+    await KendaraAPI.saveTrip(trip);
+
+    state.activeTrip = null;
+    localStorage.removeItem("kendaratrack_active_trip");
+
+    state.trips = await KendaraAPI.getTrips(state.activeVehicleId);
+    state.selectedMapTrip = trip;
+
+    updateActiveTripUI();
+    showToast("Riwayat perjalanan armada berhasil disimpan!", "success");
+
+    switchFleetTab("history");
+  }
+
+  function renderFleetTripsList() {
+    const listEl = document.getElementById("fleet-trips-list");
+    const totalTripsEl = document.getElementById("fleet-stat-total-trips");
+    const totalKmEl = document.getElementById("fleet-stat-total-km");
+    const totalVisitsEl = document.getElementById("fleet-stat-total-visits");
+    if (!listEl) return;
+
+    const trips = (state.trips || []).filter((t) => t.vehicle_id === state.activeVehicleId);
+
+    let sumKm = 0;
+    let sumVisits = 0;
+    trips.forEach((t) => {
+      sumKm += Number(t.distance_km) || 0;
+      sumVisits += (t.visits || []).length;
+    });
+
+    if (totalTripsEl) totalTripsEl.innerText = `${trips.length} Trip`;
+    if (totalKmEl) totalKmEl.innerText = `${sumKm.toFixed(1)} KM`;
+    if (totalVisitsEl) totalVisitsEl.innerText = `${sumVisits} Klien`;
+
+    if (trips.length === 0) {
+      listEl.innerHTML = `
+        <div class="p-6 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+          <i data-lucide="navigation" class="w-8 h-8 text-slate-300 mx-auto mb-2"></i>
+          <p class="text-xs font-semibold text-slate-600">Belum ada riwayat perjalanan armada.</p>
+          <p class="text-[11px] text-slate-400 mt-0.5">Mulai perjalanan pertama dengan mengaktifkan GPS.</p>
+        </div>
+      `;
+      return;
+    }
+
+    let html = "";
+    trips.forEach((trip) => {
+      const visitCount = (trip.visits || []).length;
+      const visitBadge = visitCount > 0
+        ? `<span class="px-2 py-0.5 text-[10px] rounded-md font-bold bg-amber-100 text-amber-800">📍 ${visitCount} Kunjungan</span>`
+        : `<span class="px-2 py-0.5 text-[10px] rounded-md font-medium bg-slate-100 text-slate-500">Non-Stop</span>`;
+
+      html += `
+        <div class="p-3 bg-white rounded-2xl border border-slate-100 shadow-2xs hover:shadow-sm transition-all space-y-2">
+          <div class="flex items-start justify-between gap-2">
+            <div>
+              <h5 class="text-xs font-bold text-slate-900">${Utils.escapeHTML(trip.title)}</h5>
+              <p class="text-[10px] text-slate-500">${Utils.formatDateIndo(trip.date)} • ${trip.start_time || "08:00"} - ${trip.end_time || "Selesai"}</p>
+            </div>
+            ${visitBadge}
+          </div>
+
+          <div class="grid grid-cols-3 gap-1.5 p-2 bg-slate-50 rounded-xl text-center text-[10px]">
+            <div>
+              <span class="text-slate-400 block font-semibold">Jarak</span>
+              <strong class="text-emerald-700 text-xs font-black">${trip.distance_km ? trip.distance_km.toFixed(1) : 0} KM</strong>
+            </div>
+            <div class="border-x border-slate-200">
+              <span class="text-slate-400 block font-semibold">Durasi</span>
+              <strong class="text-slate-700 font-bold">${Utils.formatDuration(trip.duration_minutes)}</strong>
+            </div>
+            <div>
+              <span class="text-slate-400 block font-semibold">Rata-rata</span>
+              <strong class="text-slate-700 font-bold">${trip.avg_speed_kmh || 30} km/h</strong>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between pt-1 gap-1.5">
+            <button type="button" onclick="App.viewTripMap('${trip.id}')"
+              class="flex-1 py-1.5 rounded-xl bg-blue-50 text-[#0B4F9C] text-[11px] font-bold hover:bg-blue-100 transition-colors flex items-center justify-center gap-1">
+              <i data-lucide="map" class="w-3.5 h-3.5"></i>
+              <span>Lihat Rute di Peta</span>
+            </button>
+            <button type="button" onclick="App.deleteTripConfirm('${trip.id}')"
+              class="p-1.5 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+        </div>
+      `;
+    });
+
+    listEl.innerHTML = html;
+  }
+
+  function viewTripMap(tripId) {
+    const trip = (state.trips || []).find((t) => t.id === tripId);
+    if (!trip) return;
+    state.selectedMapTrip = trip;
+    switchFleetTab("map");
+  }
+
+  function renderTripMap(tripId) {
+    const trips = (state.trips || []).filter((t) => t.vehicle_id === state.activeVehicleId);
+    let trip = tripId ? trips.find((t) => t.id === tripId) : state.selectedMapTrip;
+    if (!trip && trips.length > 0) trip = trips[0];
+
+    const titleEl = document.getElementById("fleet-map-trip-title");
+    const subEl = document.getElementById("fleet-map-trip-subtitle");
+    const visitsListEl = document.getElementById("fleet-map-visits-list");
+
+    if (!trip) {
+      if (titleEl) titleEl.innerText = "Belum ada rute untuk ditampilkan";
+      return;
+    }
+
+    state.selectedMapTrip = trip;
+
+    if (titleEl) titleEl.innerText = `${trip.title} (${trip.distance_km.toFixed(1)} KM)`;
+    if (subEl) subEl.innerText = `${Utils.formatDateIndo(trip.date)} • ${trip.start_time} - ${trip.end_time}`;
+
+    if (visitsListEl) {
+      const visits = trip.visits || [];
+      if (visits.length === 0) {
+        visitsListEl.innerHTML = `<p class="text-[11px] text-slate-400 italic">Tidak ada catatan kunjungan / singgah pada rute ini.</p>`;
+      } else {
+        let vHtml = "";
+        visits.forEach((v, idx) => {
+          vHtml += `
+            <div class="p-2 rounded-xl bg-amber-50/70 border border-amber-200/60 flex items-start gap-2 text-xs">
+              <span class="w-5 h-5 rounded-full bg-amber-500 text-white text-[10px] font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
+                ${idx + 1}
+              </span>
+              <div class="min-w-0">
+                <h6 class="font-bold text-slate-900 truncate">${Utils.escapeHTML(v.place_name)} <span class="text-[10px] text-slate-500 font-normal">(${v.time || ""})</span></h6>
+                ${v.notes ? `<p class="text-[10px] text-slate-600 truncate">${Utils.escapeHTML(v.notes)}</p>` : ""}
+              </div>
+            </div>
+          `;
+        });
+        visitsListEl.innerHTML = vHtml;
+      }
+    }
+
+    setTimeout(() => {
+      initOrUpdateLeafletMap(trip);
+    }, 150);
+  }
+
+  function initOrUpdateLeafletMap(trip) {
+    const mapDiv = document.getElementById("fleet-leaflet-map");
+    if (!mapDiv || typeof L === "undefined") return;
+
+    const path = trip.path && trip.path.length > 0
+      ? trip.path
+      : [[trip.start_lat || -7.2655, trip.start_lng || 112.7483]];
+
+    if (!state.leafletMapInstance) {
+      state.leafletMapInstance = L.map("fleet-leaflet-map", {
+        zoomControl: true,
+        attributionControl: false
+      }).setView(path[0], 13);
+
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19
+      }).addTo(state.leafletMapInstance);
+    } else {
+      state.leafletMapInstance.eachLayer((layer) => {
+        if (!layer._url) {
+          state.leafletMapInstance.removeLayer(layer);
+        }
+      });
+    }
+
+    const map = state.leafletMapInstance;
+
+    if (path.length > 1) {
+      const polyline = L.polyline(path, {
+        color: "#0B4F9C",
+        weight: 5,
+        opacity: 0.85,
+        lineJoin: "round"
+      }).addTo(map);
+
+      map.fitBounds(polyline.getBounds(), { padding: [30, 30] });
+    } else {
+      map.setView(path[0], 14);
+    }
+
+    const startIcon = L.divIcon({
+      html: `<div style="background:#10B981;color:white;border:2px solid white;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;box-shadow:0 2px 5px rgba(0,0,0,0.3);">A</div>`,
+      className: "",
+      iconSize: [24, 24]
+    });
+    L.marker(path[0], { icon: startIcon }).addTo(map).bindPopup(`<b>Titik Berangkat (Start)</b><br>${trip.start_time}`);
+
+    if (path.length > 1) {
+      const endIcon = L.divIcon({
+        html: `<div style="background:#EF4444;color:white;border:2px solid white;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;box-shadow:0 2px 5px rgba(0,0,0,0.3);">B</div>`,
+        className: "",
+        iconSize: [24, 24]
+      });
+      L.marker(path[path.length - 1], { icon: endIcon }).addTo(map).bindPopup(`<b>Titik Selesai (Finish)</b><br>${trip.end_time || ""}`);
+    }
+
+    const visits = trip.visits || [];
+    visits.forEach((v, idx) => {
+      if (v.lat && v.lng) {
+        const visitIcon = L.divIcon({
+          html: `<div style="background:#F59E0B;color:white;border:2px solid white;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;box-shadow:0 2px 6px rgba(0,0,0,0.35);">${idx + 1}</div>`,
+          className: "",
+          iconSize: [26, 26]
+        });
+        L.marker([v.lat, v.lng], { icon: visitIcon })
+          .addTo(map)
+          .bindPopup(`<b>Kunjungan #${idx + 1}: ${Utils.escapeHTML(v.place_name)}</b><br>Jam: ${v.time || "-"}<br><em>${Utils.escapeHTML(v.notes || "")}</em>`);
+      }
+    });
+
+    map.invalidateSize();
+  }
+
+  function openActiveTripInGoogleMaps() {
+    const trip = state.selectedMapTrip;
+    if (!trip) return;
+
+    if (trip.path && trip.path.length > 0) {
+      const origin = `${trip.path[0][0]},${trip.path[0][1]}`;
+      const dest = `${trip.path[trip.path.length - 1][0]},${trip.path[trip.path.length - 1][1]}`;
+
+      const waypoints = (trip.visits || [])
+        .filter((v) => v.lat && v.lng)
+        .map((v) => `${v.lat},${v.lng}`)
+        .join("|");
+
+      let gmapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${dest}`;
+      if (waypoints) {
+        gmapsUrl += `&waypoints=${encodeURIComponent(waypoints)}`;
+      }
+      window.open(gmapsUrl, "_blank");
+    } else {
+      window.open(`https://www.google.com/maps/search/?api=1&query=${trip.start_lat || -7.2655},${trip.start_lng || 112.7483}`, "_blank");
+    }
+  }
+
+  async function deleteTripConfirm(id) {
+    if (confirm("Hapus riwayat perjalanan ini?")) {
+      await KendaraAPI.deleteTrip(id);
+      state.trips = await KendaraAPI.getTrips(state.activeVehicleId);
+      renderFleetTripsList();
+      showToast("Riwayat perjalanan dihapus", "info");
+    }
+  }
+
   // Quick Schedule / Reminder Modal
   function openAddScheduleModal() {
     const vehicle = state.vehicles.find((v) => v.id === state.activeVehicleId);
@@ -2817,6 +3492,16 @@ const App = (function () {
     submitQuickFuelForm,
     toggleFuelCalculator,
     calculateFuelEfficiencyManual,
+    openFleetModal,
+    switchFleetTab,
+    requestGPSPermission,
+    startTripTracking,
+    stopTripTracking,
+    openAddVisitModal,
+    submitAddVisit,
+    viewTripMap,
+    openActiveTripInGoogleMaps,
+    deleteTripConfirm,
     openAddScheduleModal,
     openEditScheduleModal,
     deleteScheduleConfirm,

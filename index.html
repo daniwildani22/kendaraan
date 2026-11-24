@@ -28,6 +28,10 @@
 
   <!-- Chart.js for Interactive Bar & Donut Visualizations -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Leaflet.js for Fleet GPS Route & Interactive Map -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   
   <!-- Custom Design System Styles -->
   <link rel="stylesheet" href="css/styles.css">
@@ -330,6 +334,25 @@
           </div>
         </div>
 
+        <!-- Active Trip Floating HUD / Banner (Shown when GPS trip is recording) -->
+        <div id="home-active-trip-banner" class="hidden mb-3 p-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-700 text-white shadow-md animate-pulse">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+              <div class="w-3 h-3 rounded-full bg-emerald-300 animate-ping"></div>
+              <div>
+                <div class="flex items-center gap-1.5">
+                  <span class="text-xs font-black tracking-wide">PELACAKAN GPS AKTIF</span>
+                  <span id="home-trip-duration" class="text-[10px] font-mono bg-white/20 px-1.5 py-0.5 rounded font-bold">00:00:00</span>
+                </div>
+                <p id="home-trip-stats" class="text-[11px] text-emerald-100 font-medium">Jarak: 0.00 KM • 0 km/h</p>
+              </div>
+            </div>
+            <button type="button" onclick="App.openFleetModal()" class="px-3 py-1.5 rounded-xl bg-white text-emerald-800 text-xs font-bold shadow-xs active:scale-95">
+              Buka Panel
+            </button>
+          </div>
+        </div>
+
         <!-- "Popular Services" 4x2 Grid (Exact match to reference) -->
         <div>
           <div class="flex items-center justify-between mb-2.5 px-0.5">
@@ -394,22 +417,23 @@
               <span class="text-[11px] font-bold text-slate-700 text-center leading-tight">Pajak STNK</span>
             </button>
 
-            <!-- Card 7: Update KM -->
+            <!-- Card 7: Fleet GPS Tracking -->
+            <button onclick="App.openFleetModal()" 
+              class="flex flex-col items-center justify-center p-2.5 rounded-2xl bg-white border border-slate-100 shadow-2xs hover:shadow-md transition-all active:scale-95 group aspect-square">
+              <div class="w-11 h-11 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-1.5 group-hover:scale-110 transition-transform shadow-2xs relative">
+                <i data-lucide="navigation" class="w-5 h-5"></i>
+                <span id="badge-gps-pulse" class="hidden absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span>
+              </div>
+              <span class="text-[11px] font-bold text-slate-700 text-center leading-tight">Lacak GPS</span>
+            </button>
+
+            <!-- Card 8: Update KM -->
             <button onclick="App.openUpdateKmModal()" 
               class="flex flex-col items-center justify-center p-2.5 rounded-2xl bg-white border border-slate-100 shadow-2xs hover:shadow-md transition-all active:scale-95 group aspect-square">
-              <div class="w-11 h-11 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-1.5 group-hover:scale-110 transition-transform shadow-2xs">
+              <div class="w-11 h-11 rounded-2xl bg-blue-50 text-[#0B4F9C] flex items-center justify-center mb-1.5 group-hover:scale-110 transition-transform shadow-2xs">
                 <i data-lucide="gauge" class="w-5 h-5"></i>
               </div>
               <span class="text-[11px] font-bold text-slate-700 text-center leading-tight">Update KM</span>
-            </button>
-
-            <!-- Card 8: Pemasukan -->
-            <button onclick="App.openAddTransactionModal('pendapatan')" 
-              class="flex flex-col items-center justify-center p-2.5 rounded-2xl bg-white border border-slate-100 shadow-2xs hover:shadow-md transition-all active:scale-95 group aspect-square">
-              <div class="w-11 h-11 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center mb-1.5 group-hover:scale-110 transition-transform shadow-2xs">
-                <i data-lucide="trending-up" class="w-5 h-5"></i>
-              </div>
-              <span class="text-[11px] font-bold text-slate-700 text-center leading-tight">Pemasukan</span>
             </button>
           </div>
         </div>
@@ -2083,6 +2107,279 @@
           <button type="submit"
             class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-[#0A3981] to-[#0B4F9C] text-white text-xs font-bold shadow-md active:scale-98">
             Simpan Pengisian BBM
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 13: Fleet Trip & Visit Tracking (GPS) -->
+  <div id="modal-fleet-tracking" class="modal-backdrop fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 hidden">
+    <div class="w-full max-w-lg bg-white rounded-t-3xl sm:rounded-3xl p-5 shadow-2xl animate-fade-in max-h-[92vh] overflow-y-auto space-y-4">
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+        <div class="flex items-center gap-2.5">
+          <div class="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center shadow-2xs">
+            <i data-lucide="navigation" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-extrabold text-slate-900">Fleet Tracking & GPS Kunjungan</h3>
+            <p id="fleet-vehicle-name" class="text-xs text-slate-400">Honda Vario 160 CBS • L 1234 AB</p>
+          </div>
+        </div>
+        <button onclick="App.closeModal('modal-fleet-tracking')" class="p-1.5 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Fleet Nav Tabs -->
+      <div class="grid grid-cols-3 gap-1 p-1 bg-slate-100 rounded-2xl text-xs font-bold text-center">
+        <button type="button" id="fleet-tab-btn-live" onclick="App.switchFleetTab('live')"
+          class="py-2 rounded-xl bg-white text-slate-900 shadow-2xs transition-all">
+          🔴 Live GPS
+        </button>
+        <button type="button" id="fleet-tab-btn-history" onclick="App.switchFleetTab('history')"
+          class="py-2 rounded-xl text-slate-500 hover:text-slate-800 transition-all">
+          📋 Riwayat Trip
+        </button>
+        <button type="button" id="fleet-tab-btn-map" onclick="App.switchFleetTab('map')"
+          class="py-2 rounded-xl text-slate-500 hover:text-slate-800 transition-all">
+          🗺️ Peta Rute
+        </button>
+      </div>
+
+      <!-- TAB 1: LIVE GPS TRACKING -->
+      <div id="fleet-tab-content-live" class="space-y-3.5">
+        <!-- GPS Status & Mandatory Permission Box -->
+        <div id="fleet-gps-permission-box" class="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 space-y-2">
+          <div class="flex items-start gap-2.5">
+            <div class="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center flex-shrink-0">
+              <i data-lucide="shield-alert" class="w-4 h-4"></i>
+            </div>
+            <div>
+              <h4 class="text-xs font-bold text-slate-900">Pengguna Wajib Mengaktifkan GPS</h4>
+              <p class="text-[11px] text-slate-600 leading-relaxed">
+                Untuk mencatat riwayat perjalanan dan kunjungan secara otomatis, izinkan akses lokasi (High Accuracy) pada perangkat Anda.
+              </p>
+            </div>
+          </div>
+          <button type="button" onclick="App.requestGPSPermission()"
+            class="w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 text-white text-xs font-bold shadow-sm flex items-center justify-center gap-1.5 active:scale-98">
+            <i data-lucide="crosshair" class="w-3.5 h-3.5"></i>
+            <span>Izinkan & Kunci Sinyal GPS</span>
+          </button>
+        </div>
+
+        <div id="fleet-gps-ready-box" class="hidden p-3 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <div class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></div>
+            <div>
+              <p class="text-xs font-bold text-emerald-900">GPS Terkunci & Siap</p>
+              <p id="fleet-gps-coords-text" class="text-[10px] text-emerald-700 font-mono">-7.265500, 112.748300 (±4m)</p>
+            </div>
+          </div>
+          <span class="px-2 py-0.5 text-[10px] rounded-full font-bold bg-emerald-100 text-emerald-800">
+            Akurat
+          </span>
+        </div>
+
+        <!-- Live HUD Display (Dark Speedometer Screen) -->
+        <div class="p-4 rounded-3xl bg-slate-900 text-white shadow-xl space-y-3.5 border border-slate-800">
+          <div class="flex items-center justify-between text-xs">
+            <span class="flex items-center gap-1.5 text-slate-300 font-bold">
+              <span id="fleet-live-pulse-dot" class="w-2.5 h-2.5 rounded-full bg-slate-500"></span>
+              <span id="fleet-live-status-text">STATUS: STANDBY</span>
+            </span>
+            <span id="fleet-live-timer" class="font-mono text-sm font-black text-emerald-400 bg-slate-800 px-3 py-1 rounded-xl border border-slate-700">00:00:00</span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2.5 text-center">
+            <div class="p-3 rounded-2xl bg-slate-800/80 border border-slate-700/80">
+              <p class="text-[10px] uppercase font-bold text-slate-400">Kecepatan</p>
+              <p id="fleet-live-speed" class="text-3xl font-black text-emerald-400 mt-0.5">0 <span class="text-xs font-normal text-slate-400">km/h</span></p>
+            </div>
+            <div class="p-3 rounded-2xl bg-slate-800/80 border border-slate-700/80">
+              <p class="text-[10px] uppercase font-bold text-slate-400">Jarak Tempuh</p>
+              <p id="fleet-live-distance" class="text-3xl font-black text-white mt-0.5">0.00 <span class="text-xs font-normal text-slate-400">KM</span></p>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between text-[11px] text-slate-400 pt-1 border-t border-slate-800">
+            <span>Kunjungan: <strong id="fleet-live-visits-count" class="text-emerald-400 font-bold">0 Lokasi</strong></span>
+            <span id="fleet-live-max-speed">Maks: 0 km/h</span>
+          </div>
+        </div>
+
+        <!-- Trip Setup Controls (Before starting trip) -->
+        <div id="fleet-setup-controls" class="space-y-3">
+          <div>
+            <label class="text-xs font-semibold text-slate-700">Tujuan / Judul Perjalanan</label>
+            <input type="text" id="fleet-input-title" placeholder="Misal: Pengantaran Order & Sales Visit"
+              class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200 font-semibold">
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="text-xs font-semibold text-slate-700">Kategori Perjalanan</label>
+              <select id="fleet-input-purpose" class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200 font-semibold">
+                <option value="dinas">Dinas / Operasional</option>
+                <option value="sales">Sales & Kunjungan Toko</option>
+                <option value="logistik">Pengantaran Barang</option>
+                <option value="pribadi">Pribadi</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs font-semibold text-slate-700">Driver / PIC</label>
+              <input type="text" id="fleet-input-driver" placeholder="Nama Driver"
+                class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200">
+            </div>
+          </div>
+
+          <button type="button" id="fleet-btn-start" onclick="App.startTripTracking()"
+            class="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-700 text-white text-sm font-extrabold shadow-md flex items-center justify-center gap-2 active:scale-98 transition-all">
+            <i data-lucide="play" class="w-4 h-4 fill-white"></i>
+            <span>Mulai Perjalanan (Wajib GPS)</span>
+          </button>
+        </div>
+
+        <!-- Active Trip Action Buttons (While trip is running) -->
+        <div id="fleet-active-controls" class="hidden space-y-2.5">
+          <button type="button" onclick="App.openAddVisitModal()"
+            class="w-full py-3 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-extrabold shadow-sm flex items-center justify-center gap-2 active:scale-98 transition-all">
+            <i data-lucide="map-pin" class="w-4 h-4"></i>
+            <span>+ Catat Kunjungan / Singgah di Sini</span>
+          </button>
+
+          <button type="button" onclick="App.stopTripTracking()"
+            class="w-full py-3.5 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-extrabold shadow-md flex items-center justify-center gap-2 active:scale-98 transition-all">
+            <i data-lucide="square" class="w-4 h-4 fill-white"></i>
+            <span>Selesai & Simpan Riwayat Perjalanan</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- TAB 2: TRIP HISTORY LIST -->
+      <div id="fleet-tab-content-history" class="hidden space-y-3">
+        <!-- Overview summary banner -->
+        <div class="grid grid-cols-3 gap-2 p-3 bg-slate-50 rounded-2xl border border-slate-100 text-center">
+          <div>
+            <p class="text-[10px] text-slate-400 uppercase font-bold">Total Trip</p>
+            <p id="fleet-stat-total-trips" class="text-sm font-black text-slate-900 mt-0.5">3 Trip</p>
+          </div>
+          <div class="border-x border-slate-200">
+            <p class="text-[10px] text-slate-400 uppercase font-bold">Total Jarak</p>
+            <p id="fleet-stat-total-km" class="text-sm font-black text-emerald-700 mt-0.5">124.1 KM</p>
+          </div>
+          <div>
+            <p class="text-[10px] text-slate-400 uppercase font-bold">Kunjungan</p>
+            <p id="fleet-stat-total-visits" class="text-sm font-black text-slate-900 mt-0.5">5 Klien</p>
+          </div>
+        </div>
+
+        <div id="fleet-trips-list" class="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+          <!-- Populated by App.js -->
+        </div>
+      </div>
+
+      <!-- TAB 3: ROUTE MAP & VISITS VIEWER -->
+      <div id="fleet-tab-content-map" class="hidden space-y-3">
+        <div class="flex items-center justify-between">
+          <div>
+            <h4 id="fleet-map-trip-title" class="text-xs font-bold text-slate-900">Rute Perjalanan Terpilih</h4>
+            <p id="fleet-map-trip-subtitle" class="text-[10px] text-slate-400">Garis biru menunjukkan jalur GPS yang dilalui</p>
+          </div>
+          <button type="button" id="fleet-map-google-btn" onclick="App.openActiveTripInGoogleMaps()"
+            class="text-[10px] font-bold text-[#0B4F9C] hover:underline flex items-center gap-1">
+            <i data-lucide="external-link" class="w-3 h-3"></i> Google Maps
+          </button>
+        </div>
+
+        <!-- Interactive Map Container (Leaflet / OSM) -->
+        <div id="fleet-map-container" class="w-full h-64 rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 relative shadow-inner">
+          <div id="fleet-leaflet-map" class="w-full h-full"></div>
+        </div>
+
+        <!-- Visits in this Trip List -->
+        <div class="space-y-1.5">
+          <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Titik Kunjungan & Singgah</p>
+          <div id="fleet-map-visits-list" class="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+            <!-- Populated by App.js -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="flex items-center space-x-2 pt-2 border-t border-slate-100">
+        <button type="button" onclick="App.closeModal('modal-fleet-tracking')"
+          class="w-full py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50">
+          Tutup
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 14: Catat Kunjungan / Singgah Baru -->
+  <div id="modal-add-visit" class="modal-backdrop fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 hidden">
+    <div class="w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl p-5 shadow-2xl animate-fade-in space-y-4">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
+            <i data-lucide="map-pin" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-slate-900">Catat Kunjungan / Singgah</h3>
+            <p class="text-[10px] text-slate-400">Lokasi GPS terkunci otomatis</p>
+          </div>
+        </div>
+        <button onclick="App.closeModal('modal-add-visit')" class="text-slate-400 hover:text-slate-700">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form id="fleet-visit-form" onsubmit="App.submitAddVisit(event)" class="space-y-3">
+        <div>
+          <label class="text-xs font-semibold text-slate-700">Nama Toko / Klien / Lokasi</label>
+          <input type="text" id="visit-input-name" placeholder="Misal: Toko Surya Motor / PT Samudra" required
+            class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200 font-bold">
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-xs font-semibold text-slate-700">Jenis Kunjungan</label>
+            <select id="visit-input-category" class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200 font-semibold">
+              <option value="kunjungan_toko">Kunjungan Toko / Mitra</option>
+              <option value="meeting_klien">Pertemuan / Meeting Klien</option>
+              <option value="pengiriman">Pengiriman Barang</option>
+              <option value="spbu">Pengisian BBM / SPBU</option>
+              <option value="istirahat">Istirahat / Makan</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-xs font-semibold text-slate-700">Waktu Singgah</label>
+            <input type="time" id="visit-input-time"
+              class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200">
+          </div>
+        </div>
+
+        <div>
+          <label class="text-xs font-semibold text-slate-700">Alamat / Patokan (Opsional)</label>
+          <input type="text" id="visit-input-address" placeholder="Contoh: Jl. Rungkut Madya No. 45"
+            class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200">
+        </div>
+
+        <div>
+          <label class="text-xs font-semibold text-slate-700">Catatan Kegiatan / Hasil</label>
+          <input type="text" id="visit-input-notes" placeholder="Misal: Serah terima barang & katalog baru"
+            class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200">
+        </div>
+
+        <div class="flex items-center space-x-2 pt-2">
+          <button type="button" onclick="App.closeModal('modal-add-visit')"
+            class="flex-1 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50">
+            Batal
+          </button>
+          <button type="submit"
+            class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-white text-xs font-bold shadow-md active:scale-98">
+            Simpan Kunjungan
           </button>
         </div>
       </form>

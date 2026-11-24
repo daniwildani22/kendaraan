@@ -453,7 +453,159 @@ const SEED_SCHEDULES = [
   }
 ];
 
+const SEED_TRIPS = [
+  {
+    id: "trip-001",
+    vehicle_id: "veh-001",
+    title: "Pengiriman Dokumen & Kunjungan Klien",
+    purpose: "dinas",
+    date: "2026-11-23",
+    start_time: "08:30",
+    end_time: "11:15",
+    duration_minutes: 165,
+    distance_km: 21.4,
+    avg_speed_kmh: 31,
+    max_speed_kmh: 54,
+    start_address: "Kantor Pusat - Jl. Pemuda No. 10, Surabaya",
+    end_address: "Kantor Pusat - Jl. Pemuda No. 10, Surabaya",
+    start_lat: -7.2655,
+    start_lng: 112.7483,
+    end_lat: -7.2655,
+    end_lng: 112.7483,
+    status: "completed",
+    visits: [
+      {
+        id: "vis-101",
+        place_name: "Toko Sparepart Surya Motor",
+        category: "kunjungan_toko",
+        address: "Jl. Rungkut Madya No. 45, Surabaya",
+        time: "09:15",
+        lat: -7.3215,
+        lng: 112.7758,
+        notes: "Pengantaran nota pemesanan & follow up stok busi",
+        photo: ""
+      },
+      {
+        id: "vis-102",
+        place_name: "PT Samudra Logistik Merr",
+        category: "meeting_klien",
+        address: "Jl. Dr. Ir. H. Soekarno (MERR) No. 88, Surabaya",
+        time: "10:10",
+        lat: -7.2942,
+        lng: 112.7845,
+        notes: "Pertemuan koordinasi jadwal servis armada kantor",
+        photo: ""
+      }
+    ],
+    path: [
+      [-7.2655, 112.7483],
+      [-7.2850, 112.7560],
+      [-7.3100, 112.7680],
+      [-7.3215, 112.7758],
+      [-7.3080, 112.7800],
+      [-7.2942, 112.7845],
+      [-7.2750, 112.7600],
+      [-7.2655, 112.7483]
+    ],
+    notes: "Rute lancar, 2 kunjungan klien selesai tepat waktu."
+  },
+  {
+    id: "trip-002",
+    vehicle_id: "veh-001",
+    title: "Kanvaser & Cek Display Produk",
+    purpose: "sales",
+    date: "2026-11-21",
+    start_time: "13:00",
+    end_time: "15:45",
+    duration_minutes: 165,
+    distance_km: 18.2,
+    avg_speed_kmh: 28,
+    max_speed_kmh: 49,
+    start_address: "Jl. Pemuda No. 10, Surabaya",
+    end_address: "Jl. Pemuda No. 10, Surabaya",
+    start_lat: -7.2655,
+    start_lng: 112.7483,
+    end_lat: -7.2655,
+    end_lng: 112.7483,
+    status: "completed",
+    visits: [
+      {
+        id: "vis-103",
+        place_name: "Toko Makmur Jaya Wonokromo",
+        category: "kunjungan_toko",
+        address: "Jl. Wonokromo No. 12, Surabaya",
+        time: "13:40",
+        lat: -7.3012,
+        lng: 112.7381,
+        notes: "Restock katalog promosi & tanda terima brosur",
+        photo: ""
+      }
+    ],
+    path: [
+      [-7.2655, 112.7483],
+      [-7.2800, 112.7420],
+      [-7.3012, 112.7381],
+      [-7.2850, 112.7450],
+      [-7.2655, 112.7483]
+    ],
+    notes: "Kunjungan rutin toko mitra Surabaya Selatan"
+  },
+  {
+    id: "trip-003",
+    vehicle_id: "veh-002",
+    title: "Pengantaran Barang & Meeting Luar Kota",
+    purpose: "logistik",
+    date: "2026-11-20",
+    start_time: "07:30",
+    end_time: "13:30",
+    duration_minutes: 360,
+    distance_km: 84.5,
+    avg_speed_kmh: 46,
+    max_speed_kmh: 92,
+    start_address: "Gudang Surabaya - Margomulyo",
+    end_address: "Kantor Pusat Surabaya",
+    start_lat: -7.2402,
+    start_lng: 112.6781,
+    end_lat: -7.2655,
+    end_lng: 112.7483,
+    status: "completed",
+    visits: [
+      {
+        id: "vis-201",
+        place_name: "Distributor Mojokerto Baru",
+        category: "kunjungan_toko",
+        address: "Jl. Gajah Mada No. 90, Mojokerto",
+        time: "09:30",
+        lat: -7.4721,
+        lng: 112.4338,
+        notes: "Serah terima muatan 12 koli sparepart resmi",
+        photo: ""
+      },
+      {
+        id: "vis-202",
+        place_name: "SPBU Rest Area Tol Trans Jawa KM 710",
+        category: "spbu",
+        address: "Rest Area KM 710 Tol Sumo",
+        time: "11:45",
+        lat: -7.3820,
+        lng: 112.5620,
+        notes: "Isi bensin Pertamax & istirahat makan siang",
+        photo: ""
+      }
+    ],
+    path: [
+      [-7.2402, 112.6781],
+      [-7.3100, 112.6000],
+      [-7.4721, 112.4338],
+      [-7.3820, 112.5620],
+      [-7.2655, 112.7483]
+    ],
+    notes: "Pengiriman lancar via Tol Sumo"
+  }
+];
+
 window.SEED_VEHICLES = SEED_VEHICLES;
 window.SEED_TRANSACTIONS = SEED_TRANSACTIONS;
 window.SEED_MAINTENANCE_LOGS = SEED_MAINTENANCE_LOGS;
 window.SEED_SCHEDULES = SEED_SCHEDULES;
+window.SEED_TRIPS = SEED_TRIPS;
