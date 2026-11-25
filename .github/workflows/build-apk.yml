@@ -25,33 +25,29 @@ jobs:
           node-version: 20
 
       - name: Install Capacitor CLI
-        run: npm install @capacitor/core @capacitor/cli @capacitor/android
+        run: |
+          npm install --save @capacitor/core @capacitor/cli @capacitor/android --legacy-peer-deps
 
       - name: Prepare Web Assets
         run: |
           mkdir -p www
           cp -r index.html manifest.json sw.js css js icons services www/ 2>/dev/null || true
 
-      - name: Ensure Capacitor Config
+      - name: Create Capacitor Config
         run: |
-          if [ ! -f "capacitor.config.json" ]; then
-            echo '{"appId":"com.kendaratrack.app","appName":"KendaraTrack","webDir":"www","server":{"androidScheme":"https"}}' > capacitor.config.json
-          fi
+          echo '{"appId":"com.kendaratrack.app","appName":"KendaraTrack","webDir":"www","server":{"androidScheme":"https"}}' > capacitor.config.json
 
       - name: Setup Android Project
         run: |
-          if [ ! -d "android" ] || [ ! -f "android/gradlew" ] || [ ! -f "android/gradle/wrapper/gradle-wrapper.jar" ]; then
-            rm -rf android
-            npx cap add android
-          else
-            npx cap sync android
-          fi
+          rm -rf android
+          npx cap add android
+          sed -i '/<\/manifest>/i \    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\n    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />\n    <uses-feature android:name="android.hardware.location.gps" android:required="false" />' android/app/src/main/AndroidManifest.xml
           chmod +x android/gradlew
 
       - name: Build Debug APK
         run: |
           cd android
-          ./gradlew assembleDebug --no-daemon --stacktrace
+          ./gradlew assembleDebug --no-daemon
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
