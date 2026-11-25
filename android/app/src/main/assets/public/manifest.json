@@ -1,0 +1,50 @@
+{
+  "id": "/?source=pwa",
+  "name": "KendaraTrack - Manajemen Kendaraan",
+  "short_name": "KendaraTrack",
+  "description": "Aplikasi pelacak operasional, servis berkala, pengeluaran BBM, dan pengingat pajak/SIM kendaraan pribadi.",
+  "start_url": "./index.html?source=pwa",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F8FAFC",
+  "theme_color": "#0B4F9C",
+  "icons": [
+    {
+      "src": "icons/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "categories": ["utilities", "productivity", "finance"],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Catat Transaksi",
+      "short_name": "+ Transaksi",
+      "description": "Tambah transaksi pengeluaran atau pemasukan baru",
+      "url": "./index.html?action=transaction",
+      "icons": [{ "src": "icons/icon-192.svg", "sizes": "192x192" }]
+    },
+    {
+      "name": "Catat Ganti Oli",
+      "short_name": "+ Ganti Oli",
+      "description": "Catat penggantian oli mesin dan KM odometer",
+      "url": "./index.html?action=oil",
+      "icons": [{ "src": "icons/icon-192.svg", "sizes": "192x192" }]
+    }
+  ]
+}

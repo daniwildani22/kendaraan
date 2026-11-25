@@ -1,0 +1,2432 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>KendaraTrack - Manajemen Kendaraan & Pengingat Finansial</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Google Fonts: Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- Web App Manifest for PWA (Add to Home Screen) -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0B4F9C">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="KendaraTrack">
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+  <link rel="apple-touch-icon" href="icons/icon-192.svg">
+
+  <!-- Chart.js for Interactive Bar & Donut Visualizations -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Leaflet.js for Fleet GPS Route & Interactive Map -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  
+  <!-- Custom Design System Styles -->
+  <link rel="stylesheet" href="css/styles.css">
+  
+  <!-- Tailwind Custom Config -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              navy: '#0A3981',
+              royal: '#0B4F9C',
+              blue: '#1565C0',
+              accent: '#F97316',
+              amber: '#F59E0B',
+              soft: '#EFF6FF'
+            }
+          },
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-slate-50 text-slate-900 min-h-screen">
+
+  <!-- Desktop Mobile Frame Wrapper -->
+  <div class="mobile-viewport-container flex flex-col">
+    
+    <!-- Top Phone Bezel Notch (Dynamic Island Mockup for Desktop - Matching Reference) -->
+    <div class="hidden md:flex justify-center pt-2.5 pb-1 bg-white border-b border-slate-50">
+      <div class="w-24 h-5 rounded-full bg-slate-900 flex items-center justify-between px-3 text-[10px] text-slate-500 shadow-inner">
+        <span class="w-2.5 h-2.5 rounded-full bg-slate-800"></span>
+        <span class="w-2 h-2 rounded-full bg-blue-900/50"></span>
+      </div>
+    </div>
+
+    <!-- ==============================================================
+         AUTHENTICATION SCREEN (Login & Registrasi Pengguna)
+         ============================================================== -->
+    <div id="screen-login" class="min-h-screen bg-slate-50 flex flex-col justify-between p-5 hidden animate-fade-in">
+      <div class="space-y-6 pt-4">
+        <!-- Brand Header -->
+        <div class="text-center space-y-2">
+          <div class="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-[#0A3981] via-[#0B4F9C] to-[#1565C0] flex items-center justify-center text-white shadow-lg shadow-blue-900/20">
+            <i data-lucide="gauge" class="w-8 h-8"></i>
+          </div>
+          <h2 class="text-2xl font-black tracking-tight text-slate-900">KendaraTrack</h2>
+          <p class="text-xs text-slate-500 max-w-xs mx-auto">
+            Aplikasi pelacak operasional, servis rutin, & pengingat dokumen kendaraan pribadi Anda.
+          </p>
+        </div>
+
+        <!-- Auth Card -->
+        <div class="bg-white rounded-3xl p-6 border border-slate-100 shadow-xl space-y-5">
+          <!-- Auth Mode Tabs (Masuk vs Daftar) -->
+          <div class="grid grid-cols-2 p-1 rounded-2xl bg-slate-100 text-xs font-bold">
+            <button type="button" id="tab-auth-login" onclick="App.toggleAuthMode('login')"
+              class="py-2.5 rounded-xl transition-all bg-white text-[#0B4F9C] shadow-sm">
+              Masuk Akun
+            </button>
+            <button type="button" id="tab-auth-register" onclick="App.toggleAuthMode('register')"
+              class="py-2.5 rounded-xl transition-all text-slate-500 hover:text-slate-900">
+              Daftar Baru
+            </button>
+          </div>
+
+          <!-- Authentication Feedback Alert (Shows detailed errors/guidance) -->
+          <div id="auth-alert-container" class="hidden"></div>
+
+          <!-- Auth Form -->
+          <form id="auth-form" onsubmit="App.submitAuthForm(event)" class="space-y-3.5">
+            <div id="auth-name-group" class="hidden">
+              <label class="text-xs font-semibold text-slate-700">Nama Lengkap</label>
+              <div class="relative mt-1">
+                <input type="text" id="auth-name-input" placeholder="Misal: Budi Santoso"
+                  class="w-full pl-9 pr-3 py-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20">
+                <i data-lucide="user" class="w-4 h-4 text-slate-400 absolute left-3 top-3"></i>
+              </div>
+            </div>
+
+            <div>
+              <label class="text-xs font-semibold text-slate-700">Alamat Email</label>
+              <div class="relative mt-1">
+                <input type="email" id="auth-email-input" placeholder="nama@email.com" required
+                  class="w-full pl-9 pr-3 py-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20">
+                <i data-lucide="mail" class="w-4 h-4 text-slate-400 absolute left-3 top-3"></i>
+              </div>
+            </div>
+
+            <div>
+              <label class="text-xs font-semibold text-slate-700">Kata Sandi</label>
+              <div class="relative mt-1">
+                <input type="password" id="auth-password-input" placeholder="Minimal 6 karakter" required
+                  class="w-full pl-9 pr-10 py-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20">
+                <i data-lucide="lock" class="w-4 h-4 text-slate-400 absolute left-3 top-3"></i>
+                <button type="button" onclick="App.toggleAuthPasswordVisibility()" class="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600">
+                  <i id="auth-pass-toggle-icon" data-lucide="eye" class="w-4 h-4"></i>
+                </button>
+              </div>
+            </div>
+
+            <button type="submit" id="auth-submit-btn"
+              class="w-full py-3 rounded-xl bg-gradient-to-r from-[#0A3981] to-[#0B4F9C] text-white text-xs font-bold shadow-md hover:shadow-lg active:scale-98 transition-all flex items-center justify-center gap-2">
+              <i data-lucide="log-in" class="w-4 h-4"></i>
+              <span id="auth-submit-text">Masuk Sekarang</span>
+            </button>
+          </form>
+
+          <!-- Divider -->
+          <div class="relative flex items-center justify-center">
+            <div class="border-t border-slate-200 w-full"></div>
+            <span class="bg-white px-3 text-[11px] font-semibold text-slate-400 uppercase">Atau</span>
+          </div>
+
+          <!-- Quick Guest / Demo Login Button -->
+          <button type="button" onclick="App.loginAsGuest()"
+            class="w-full py-2.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold transition-all flex items-center justify-center gap-2 active:scale-98">
+            <i data-lucide="sparkles" class="w-4 h-4 text-amber-500"></i>
+            <span>Masuk Cepat sebagai Tamu (Mode Demo)</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Footer Info -->
+      <p class="text-[11px] text-center text-slate-400 py-3">
+        KendaraTrack © 2026 • Aman & Terenkripsi
+      </p>
+    </div>
+    
+    <!-- Top Sticky Header (Inspired by AdBrovez Reference) -->
+    <header id="app-header" class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-100 px-4 pt-3 pb-3">
+      <!-- Top Row: Hello, Good Morning! & Bell Icon -->
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-xs font-semibold text-slate-400">Hello,</p>
+          <h1 class="text-xl font-black text-slate-900 tracking-tight leading-tight mt-0.5">
+            <span id="header-greeting-time">Good Morning!</span> 👋
+          </h1>
+        </div>
+        
+        <div class="flex items-center gap-2">
+          <!-- Notification Bell with Orange Dot (Exact match to reference) -->
+          <button onclick="App.switchTab('calendar')" title="Pengingat & Jadwal"
+            class="relative w-10 h-10 rounded-full bg-white border border-slate-200/80 flex items-center justify-center text-slate-700 hover:bg-slate-50 shadow-2xs active:scale-95 transition-all">
+            <i data-lucide="bell" class="w-5 h-5"></i>
+            <span class="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-orange-500 ring-2 ring-white"></span>
+          </button>
+
+          <!-- Logout / User -->
+          <button onclick="App.confirmLogout()" title="Keluar Akun"
+            class="w-10 h-10 rounded-full bg-white border border-slate-200/80 flex items-center justify-center text-slate-500 hover:text-rose-600 hover:bg-rose-50 shadow-2xs active:scale-95 transition-all">
+            <i data-lucide="log-out" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Second Row: Your Location / Kendaraan Aktif (Matching Reference: "📍 Your Location / Sector 21, Noida ⌵") -->
+      <div class="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between">
+        <div class="flex items-center gap-2 min-w-0">
+          <div class="w-6 h-6 rounded-lg bg-blue-50 text-[#0B4F9C] flex items-center justify-center shrink-0">
+            <i data-lucide="map-pin" class="w-3.5 h-3.5 text-[#0B4F9C]"></i>
+          </div>
+          <div class="min-w-0">
+            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-none">Your Vehicle</p>
+            <div id="vehicle-select-container" class="mt-0.5">
+              <!-- Populated by App.js -->
+            </div>
+          </div>
+        </div>
+
+        <button onclick="App.openAddVehicleModal()" class="text-[11px] font-bold text-[#0B4F9C] hover:underline flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50/80 hover:bg-blue-100 transition-colors">
+          <i data-lucide="plus" class="w-3 h-3"></i> Tambah
+        </button>
+      </div>
+    </header>
+
+    <!-- MAIN SCROLLABLE CONTENT AREA -->
+    <main id="app-main" class="flex-1 pb-24 overflow-y-auto">
+
+      <!-- ==============================================================
+           1. HOME SCREEN (Matching AdBrovez Design System)
+           ============================================================== -->
+      <section id="screen-home" class="view-screen p-4 space-y-4 animate-fade-in">
+        
+        <!-- PWA Install Banner (Hidden if in standalone or dismissed) -->
+        <div id="pwa-install-banner" class="rounded-3xl p-3.5 bg-gradient-to-r from-[#0A3981] via-[#0B4F9C] to-[#1565C0] text-white shadow-md flex items-center justify-between gap-3 animate-fade-in border border-blue-400/30">
+          <div class="flex items-center space-x-3 min-w-0">
+            <div class="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center flex-shrink-0 text-white">
+              <i data-lucide="smartphone" class="w-5 h-5"></i>
+            </div>
+            <div class="min-w-0">
+              <h4 class="text-xs font-bold leading-tight">Pasang di Layar Utama HP</h4>
+              <p class="text-[10px] text-blue-100 mt-0.5 truncate">Buka 1-klik tanpa perlu repot buka browser</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-1.5 flex-shrink-0">
+            <button onclick="App.triggerPWAInstall()" 
+              class="px-3 py-1.5 rounded-xl bg-white text-[#0B4F9C] text-xs font-bold shadow-md hover:bg-blue-50 active:scale-95 transition-all">
+              Pasang
+            </button>
+            <button onclick="App.dismissInstallBanner()" title="Tutup" 
+              class="p-1 rounded-lg text-white/70 hover:text-white hover:bg-white/10">
+              <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Royal Blue Hero Card with Mechanic Technician Character (Matching AdBrovez Reference) -->
+        <div class="relative overflow-hidden rounded-3xl p-5 text-white shadow-xl bg-gradient-to-br from-[#0A3981] via-[#0B4F9C] to-[#1565C0]">
+          <!-- Decorative Subtle Glow Shapes -->
+          <div class="absolute -right-12 -top-12 w-44 h-44 rounded-full bg-white/10 blur-2xl pointer-events-none"></div>
+          <div class="absolute -left-10 -bottom-10 w-44 h-44 rounded-full bg-blue-400/20 blur-xl pointer-events-none"></div>
+
+          <div class="relative z-10 flex items-center justify-between gap-3">
+            <!-- Left Side: Headline & Quick Stats -->
+            <div class="space-y-2.5 max-w-[62%]">
+              <span class="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-white/20 text-white border border-white/25">
+                <i data-lucide="shield-check" class="w-3 h-3 text-orange-400"></i>
+                Quality Services
+              </span>
+              
+              <div>
+                <h2 class="text-base sm:text-lg font-black tracking-tight leading-snug text-white">
+                  Perawatan Kendaraan Terpercaya
+                </h2>
+                <p class="text-[11px] text-blue-100/90 leading-tight mt-1">
+                  Pantau siklus oli, garansi, & biaya servis secara real-time.
+                </p>
+              </div>
+
+              <!-- Quick Expense & Odometer Embedded Bar -->
+              <div class="pt-1 flex items-center gap-3">
+                <div>
+                  <p class="text-[10px] text-blue-200">Bulan Ini</p>
+                  <h3 id="home-month-expense" class="text-sm sm:text-base font-black text-white">Rp 0</h3>
+                </div>
+                <div class="h-6 w-px bg-white/20"></div>
+                <div>
+                  <p class="text-[10px] text-blue-200">Odometer</p>
+                  <div class="flex items-center gap-1">
+                    <span id="home-current-odometer" class="text-xs font-bold text-white">0 KM</span>
+                    <button onclick="App.openUpdateKmModal()" title="Update KM Odometer" class="text-blue-200 hover:text-white">
+                      <i data-lucide="edit-2" class="w-3 h-3"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right Side: Friendly Mechanic Character Illustration (Matching Reference Image) -->
+            <div class="relative shrink-0 flex items-center justify-center">
+              <svg viewBox="0 0 160 170" fill="none" xmlns="http://www.w3.org/2000/svg" class="w-28 h-28 sm:w-32 sm:h-32 object-contain filter drop-shadow-md">
+                <!-- Body / Torso -->
+                <path d="M45 130 C45 105 60 98 80 98 C100 98 115 105 115 130 L120 170 L40 170 Z" fill="#0A3981"/>
+                <!-- Polo Collar & Buttons -->
+                <path d="M70 98 L80 120 L90 98 Z" fill="#1565C0"/>
+                <path d="M77 100 L80 125 L83 100" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/>
+                <circle cx="80" cy="115" r="1.5" fill="#FFFFFF"/>
+                <circle cx="80" cy="122" r="1.5" fill="#FFFFFF"/>
+                <!-- Neck -->
+                <rect x="73" y="80" width="14" height="20" rx="4" fill="#E0A97E"/>
+                <!-- Head -->
+                <ellipse cx="80" cy="62" rx="20" ry="22" fill="#E0A97E"/>
+                <!-- Smile & Cheeks -->
+                <path d="M72 68 Q80 77 88 68" stroke="#7A3D18" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+                <path d="M74 70 Q80 78 86 70" fill="#FFFFFF"/>
+                <ellipse cx="68" cy="66" rx="3" ry="2" fill="#F87171" opacity="0.6"/>
+                <ellipse cx="92" cy="66" rx="3" ry="2" fill="#F87171" opacity="0.6"/>
+                <!-- Eyes -->
+                <circle cx="73" cy="58" r="2.5" fill="#2E1C12"/>
+                <circle cx="87" cy="58" r="2.5" fill="#2E1C12"/>
+                <path d="M69 53 Q73 51 77 53" stroke="#4A2E1E" stroke-width="2" stroke-linecap="round"/>
+                <path d="M83 53 Q87 51 91 53" stroke="#4A2E1E" stroke-width="2" stroke-linecap="round"/>
+                <!-- Ears -->
+                <ellipse cx="60" cy="62" rx="3.5" ry="5.5" fill="#E0A97E"/>
+                <ellipse cx="100" cy="62" rx="3.5" ry="5.5" fill="#E0A97E"/>
+                <!-- Blue Cap -->
+                <path d="M60 52 C60 35 70 30 80 30 C90 30 100 35 100 52 Z" fill="#0A3981"/>
+                <!-- Cap Visor -->
+                <path d="M56 50 C56 46 80 44 104 50 C106 52 104 56 98 56 C78 54 62 55 56 50 Z" fill="#1565C0"/>
+                <!-- Arms & Holding Wrench -->
+                <path d="M48 118 L32 100 C28 95 35 88 40 92 L54 110 Z" fill="#E0A97E"/>
+                <path d="M45 110 C42 108 42 125 50 135" stroke="#0A3981" stroke-width="8" stroke-linecap="round"/>
+                <!-- Silver Wrench -->
+                <g transform="translate(20, 70) rotate(-25)">
+                  <rect x="18" y="15" width="8" height="42" rx="3" fill="#CBD5E1"/>
+                  <path d="M14 15 C14 8 30 8 30 15 C28 17 24 19 24 22 C20 22 20 17 14 15 Z" fill="#94A3B8"/>
+                  <circle cx="22" cy="12" r="4.5" fill="#0B4F9C"/>
+                </g>
+                <!-- Orange Toolbox on the right -->
+                <g transform="translate(108, 120)">
+                  <rect x="0" y="8" width="30" height="22" rx="4" fill="#F97316"/>
+                  <rect x="0" y="16" width="30" height="3" fill="#EA580C"/>
+                  <rect x="11" y="14" width="8" height="6" rx="1.5" fill="#E2E8F0"/>
+                  <path d="M8 8 C8 3 22 3 22 8" stroke="#7C2D12" stroke-width="2.5" fill="none"/>
+                </g>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- Active Trip Floating HUD / Banner (Shown when GPS trip is recording) -->
+        <div id="home-active-trip-banner" class="hidden mb-3 p-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-700 text-white shadow-md animate-pulse">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+              <div class="w-3 h-3 rounded-full bg-emerald-300 animate-ping"></div>
+              <div>
+                <div class="flex items-center gap-1.5">
+                  <span class="text-xs font-black tracking-wide">PELACAKAN GPS AKTIF</span>
+                  <span id="home-trip-duration" class="text-[10px] font-mono bg-white/20 px-1.5 py-0.5 rounded font-bold">00:00:00</span>
+                </div>
+                <p id="home-trip-stats" class="text-[11px] text-emerald-100 font-medium">Jarak: 0.00 KM • 0 km/h</p>
+              </div>
+            </div>
+            <button type="button" onclick="App.openFleetModal()" class="px-3 py-1.5 rounded-xl bg-white text-emerald-800 text-xs font-bold shadow-xs active:scale-95">
+              Buka Panel
+            </button>
+          </div>
+        </div>
+
+        <!-- "Popular Services" 4x2 Grid (Exact match to reference) -->
+        <div>
+          <div class="flex items-center justify-between mb-2.5 px-0.5">
+            <h3 class="text-sm font-extrabold text-slate-900 tracking-tight">Popular Services</h3>
+            <button onclick="App.switchTab('service')" class="text-xs font-bold text-[#0B4F9C] hover:underline">
+              View All
+            </button>
+          </div>
+
+          <div class="grid grid-cols-4 gap-2.5">
+            <!-- Card 1: Bahan Bakar (BBM) -->
+            <button onclick="App.openFuelHubModal()" 
+              class="flex flex-col items-center justify-center p-2.5 rounded-2xl bg-white border border-slate-100 shadow-2xs hover:shadow-md transition-all active:scale-95 group aspect-square">
+              <div class="w-11 h-11 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mb-1.5 group-hover:scale-110 transition-transform shadow-2xs">
+                <i data-lucide="fuel" class="w-5 h-5"></i>
+              </div>
+              <span class="text-[11px] font-bold text-slate-700 text-center leading-tight">Konsumsi BBM</span>
+            </button>
+
+            <!-- Card 2: Ganti Oli -->
+            <button onclick="App.openQuickOilModal()" 
+              class="flex flex-col items-center justify-center p-2.5 rounded-2xl bg-white border border-slate-100 shadow-2xs hover:shadow-md transition-all active:scale-95 group aspect-square">
+              <div class="w-11 h-11 rounded-2xl bg-amber-50 text-amber-500 flex items-center justify-center mb-1.5 group-hover:scale-110 transition-transform shadow-2xs">
+                <i data-lucide="droplet" class="w-5 h-5"></i>
+              </div>
+              <span class="text-[11px] font-bold text-slate-700 text-center leading-tight">Ganti Oli</span>
+            </button>
+
+            <!-- Card 3: Sparepart -->
+            <button onclick="App.openQuickSparepartModal()" 
+              class="flex flex-col items-center justify-center p-2.5 rounded-2xl bg-white border border-slate-100 shadow-2xs hover:shadow-md transition-all active:scale-95 group aspect-square">
+              <div class="w-11 h-11 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center mb-1.5 group-hover:scale-110 transition-transform shadow-2xs">
+                <i data-lucide="wrench" class="w-5 h-5"></i>
+              </div>
+              <span class="text-[11px] font-bold text-slate-700 text-center leading-tight">Sparepart</span>
+            </button>
+
+            <!-- Card 4: Servis Berkala -->
+            <button onclick="App.openAddScheduleModal()" 
+              class="flex flex-col items-center justify-center p-2.5 rounded-2xl bg-white border border-slate-100 shadow-2xs hover:shadow-md transition-all active:scale-95 group aspect-square">
+              <div class="w-11 h-11 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-1.5 group-hover:scale-110 transition-transform shadow-2xs">
+                <i data-lucide="settings" class="w-5 h-5"></i>
+              </div>
+              <span class="text-[11px] font-bold text-slate-700 text-center leading-tight">Servis</span>
+            </button>
+
+            <!-- Card 5: Cuci Unit -->
+            <button onclick="App.openAddTransactionModal('cuci')" 
+              class="flex flex-col items-center justify-center p-2.5 rounded-2xl bg-white border border-slate-100 shadow-2xs hover:shadow-md transition-all active:scale-95 group aspect-square">
+              <div class="w-11 h-11 rounded-2xl bg-cyan-50 text-cyan-600 flex items-center justify-center mb-1.5 group-hover:scale-110 transition-transform shadow-2xs">
+                <i data-lucide="sparkles" class="w-5 h-5"></i>
+              </div>
+              <span class="text-[11px] font-bold text-slate-700 text-center leading-tight">Cuci Unit</span>
+            </button>
+
+            <!-- Card 6: Pajak & SIM -->
+            <button onclick="App.openAddScheduleModal()" 
+              class="flex flex-col items-center justify-center p-2.5 rounded-2xl bg-white border border-slate-100 shadow-2xs hover:shadow-md transition-all active:scale-95 group aspect-square">
+              <div class="w-11 h-11 rounded-2xl bg-rose-50 text-rose-500 flex items-center justify-center mb-1.5 group-hover:scale-110 transition-transform shadow-2xs">
+                <i data-lucide="file-text" class="w-5 h-5"></i>
+              </div>
+              <span class="text-[11px] font-bold text-slate-700 text-center leading-tight">Pajak STNK</span>
+            </button>
+
+            <!-- Card 7: Fleet GPS Tracking -->
+            <button onclick="App.openFleetModal()" 
+              class="flex flex-col items-center justify-center p-2.5 rounded-2xl bg-white border border-slate-100 shadow-2xs hover:shadow-md transition-all active:scale-95 group aspect-square">
+              <div class="w-11 h-11 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-1.5 group-hover:scale-110 transition-transform shadow-2xs relative">
+                <i data-lucide="navigation" class="w-5 h-5"></i>
+                <span id="badge-gps-pulse" class="hidden absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span>
+              </div>
+              <span class="text-[11px] font-bold text-slate-700 text-center leading-tight">Lacak GPS</span>
+            </button>
+
+            <!-- Card 8: Update KM -->
+            <button onclick="App.openUpdateKmModal()" 
+              class="flex flex-col items-center justify-center p-2.5 rounded-2xl bg-white border border-slate-100 shadow-2xs hover:shadow-md transition-all active:scale-95 group aspect-square">
+              <div class="w-11 h-11 rounded-2xl bg-blue-50 text-[#0B4F9C] flex items-center justify-center mb-1.5 group-hover:scale-110 transition-transform shadow-2xs">
+                <i data-lucide="gauge" class="w-5 h-5"></i>
+              </div>
+              <span class="text-[11px] font-bold text-slate-700 text-center leading-tight">Update KM</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Primary CTA Button (Matching Reference "Book a Service") -->
+        <button onclick="App.openAddTransactionModal()" 
+          class="w-full py-3.5 px-4 rounded-2xl bg-[#0B4F9C] hover:bg-[#093e7a] text-white font-extrabold text-sm shadow-md shadow-blue-900/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+          <i data-lucide="plus-circle" class="w-4 h-4"></i>
+          <span>Catat Transaksi / Servis Baru</span>
+        </button>
+
+        <!-- Trust Verification Card (Matching Reference Floating Badge) -->
+        <div class="p-3.5 bg-white rounded-2xl border border-slate-100 shadow-2xs flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-blue-50 text-[#0B4F9C] flex items-center justify-center shrink-0">
+            <i data-lucide="shield-check" class="w-6 h-6 text-[#0B4F9C]"></i>
+          </div>
+          <div class="min-w-0 flex-1">
+            <h5 class="text-xs font-bold text-slate-900">Verified Health & Safe Data</h5>
+            <p class="text-[10px] text-slate-400 mt-0.5">Cloud Supabase PostgreSQL & PWA Standalone Ready</p>
+          </div>
+          <button onclick="App.copySyncLinkForMobile()" class="p-1.5 rounded-lg text-slate-400 hover:text-[#0B4F9C] hover:bg-blue-50 transition-colors" title="Buka Sinkronisasi HP">
+            <i data-lucide="share-2" class="w-4 h-4"></i>
+          </button>
+        </div>
+
+        <!-- Active Vehicle Showcase Card (Front & Center Vehicle Photo) -->
+        <div id="home-vehicle-showcase-container">
+          <!-- Populated by App.renderHomeVehicleCard() -->
+        </div>
+
+        <!-- "Pengingat Terdekat" Section -->
+        <div>
+          <div class="flex items-center justify-between mb-2 px-0.5">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">Pengingat Terdekat</h3>
+            <button onclick="App.switchTab('calendar')" class="text-xs font-bold text-[#0B4F9C] hover:underline">
+              Lihat Kalender
+            </button>
+          </div>
+          <div id="home-reminders-list" class="space-y-2.5">
+            <!-- Populated by App.js -->
+          </div>
+        </div>
+
+        <!-- "Aktivitas Terbaru" List -->
+        <div>
+          <div class="flex items-center justify-between mb-2 px-0.5">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">Aktivitas Terbaru</h3>
+            <button onclick="App.switchTab('transactions')" class="text-xs font-bold text-[#0B4F9C] hover:underline">
+              Semua Transaksi
+            </button>
+          </div>
+          <div id="home-recent-activities" class="space-y-2">
+            <!-- Populated by App.js -->
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ==============================================================
+           2. KALENDER SCREEN (Jadwal & Pengingat)
+           ============================================================== -->
+      <section id="screen-calendar" class="view-screen p-4 space-y-4 hidden animate-fade-in">
+        
+        <!-- Header with Month Nav & Add Schedule -->
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-lg font-black text-slate-900">Jadwal & Pengingat</h2>
+            <p class="text-xs text-slate-500">Pantau jatuh tempo servis, pajak & tagihan</p>
+          </div>
+          <button onclick="App.openAddScheduleModal()"
+            class="px-3 py-1.5 rounded-xl bg-gradient-to-r from-[#0A3981] to-[#0B4F9C] text-white text-xs font-semibold shadow-sm flex items-center gap-1 active:scale-95">
+            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+            <span>Jadwal</span>
+          </button>
+        </div>
+
+        <!-- Interactive Monthly Calendar Card -->
+        <div class="bg-white rounded-3xl p-4 border border-slate-100 shadow-sm">
+          
+          <!-- Month Selector Controls -->
+          <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+            <button onclick="Calendar.prevMonth()" class="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors">
+              <i data-lucide="chevron-left" class="w-5 h-5"></i>
+            </button>
+            
+            <div class="text-center">
+              <h3 id="cal-month-title" class="text-sm font-bold text-slate-900">November 2026</h3>
+              <button onclick="Calendar.goToToday()" class="text-[10px] font-bold text-[#0B4F9C] hover:underline">
+                Hari Ini
+              </button>
+            </div>
+
+            <button onclick="Calendar.nextMonth()" class="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors">
+              <i data-lucide="chevron-right" class="w-5 h-5"></i>
+            </button>
+          </div>
+
+          <!-- Day of week headers -->
+          <div class="grid grid-cols-7 text-center text-[11px] font-bold text-slate-400 py-2.5">
+            <span>Min</span>
+            <span>Sen</span>
+            <span>Sel</span>
+            <span>Rab</span>
+            <span>Kam</span>
+            <span>Jum</span>
+            <span>Sab</span>
+          </div>
+
+          <!-- Calendar Days Grid -->
+          <div id="cal-days-grid" class="grid grid-cols-7 gap-1 text-center">
+            <!-- Populated dynamically by calendar.js -->
+          </div>
+
+          <!-- Calendar Dot Legend -->
+          <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-around text-[10px] text-slate-500 font-medium">
+            <div class="flex items-center space-x-1">
+              <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+              <span>Oli / Servis</span>
+            </div>
+            <div class="flex items-center space-x-1">
+              <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+              <span>Cicilan</span>
+            </div>
+            <div class="flex items-center space-x-1">
+              <span class="w-2 h-2 rounded-full bg-rose-500"></span>
+              <span>Pajak STNK / SIM</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Agenda Section Header & Filter Pills -->
+        <div class="space-y-2 pt-1">
+          <div class="flex items-center justify-between">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">Daftar Agenda</h3>
+            
+            <!-- Agenda Filter Tabs -->
+            <div class="flex items-center space-x-1 bg-slate-100 p-0.5 rounded-xl text-xs">
+              <button onclick="Calendar.setFilter('semua')" class="px-2.5 py-1 rounded-lg font-medium text-slate-600 hover:text-slate-900 focus:bg-white focus:shadow-xs">Semua</button>
+              <button onclick="Calendar.setFilter('pending')" class="px-2.5 py-1 rounded-lg font-medium text-slate-600 hover:text-slate-900 focus:bg-white focus:shadow-xs">Belum</button>
+              <button onclick="Calendar.setFilter('completed')" class="px-2.5 py-1 rounded-lg font-medium text-slate-600 hover:text-slate-900 focus:bg-white focus:shadow-xs">Selesai</button>
+            </div>
+          </div>
+          <p id="cal-agenda-subtitle" class="text-xs text-slate-500">Semua pengingat bulan ini</p>
+        </div>
+
+        <!-- Agenda List Container -->
+        <div id="cal-agenda-list" class="space-y-2.5">
+          <!-- Populated by Calendar.js -->
+        </div>
+
+      </section>
+
+      <!-- ==============================================================
+           3. TRANSAKSI SCREEN (Kas Masuk & Keluar)
+           ============================================================== -->
+      <section id="screen-transactions" class="view-screen p-4 space-y-4 hidden animate-fade-in">
+        
+        <!-- Header & Action -->
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-lg font-black text-slate-900">Transaksi Kas</h2>
+            <p class="text-xs text-slate-500">Catatan pemasukan & pengeluaran kendaraan</p>
+          </div>
+          <button onclick="App.openAddTransactionModal()" 
+            class="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#0A3981] to-[#0B4F9C] text-white text-xs font-semibold shadow-sm flex items-center gap-1 active:scale-95">
+            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+            <span>Catat</span>
+          </button>
+        </div>
+
+        <!-- Summary Strip Card -->
+        <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm grid grid-cols-3 divide-x divide-slate-100 text-center">
+          <div class="pr-2">
+            <p class="text-[10px] text-slate-400 font-semibold uppercase">Pemasukan</p>
+            <p id="tx-summary-masuk" class="text-xs font-bold text-emerald-700 mt-0.5">Rp 0</p>
+          </div>
+          <div class="px-2">
+            <p class="text-[10px] text-slate-400 font-semibold uppercase">Pengeluaran</p>
+            <p id="tx-summary-keluar" class="text-xs font-bold text-slate-900 mt-0.5">Rp 0</p>
+          </div>
+          <div class="pl-2">
+            <p class="text-[10px] text-slate-400 font-semibold uppercase">Selisih</p>
+            <p id="tx-summary-selisih" class="text-xs font-bold text-emerald-700 mt-0.5">Rp 0</p>
+          </div>
+        </div>
+
+        <!-- Filter Controls: Pills + Search + Category -->
+        <div class="space-y-2.5">
+          <!-- Type Filter Pills -->
+          <div class="flex items-center space-x-1.5 overflow-x-auto pb-1">
+            <button onclick="App.setTxFilterType('semua')" data-type="semua"
+              class="tx-filter-pill px-4 py-1.5 rounded-full text-xs font-bold bg-[#0B4F9C] text-white shadow-sm">
+              Semua
+            </button>
+            <button onclick="App.setTxFilterType('pemasukan')" data-type="pemasukan"
+              class="tx-filter-pill px-4 py-1.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600 hover:bg-slate-200">
+              Pemasukan
+            </button>
+            <button onclick="App.setTxFilterType('pengeluaran')" data-type="pengeluaran"
+              class="tx-filter-pill px-4 py-1.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600 hover:bg-slate-200">
+              Pengeluaran
+            </button>
+          </div>
+
+          <!-- Search & Category Filters -->
+          <div class="grid grid-cols-5 gap-2">
+            <div class="col-span-3 relative">
+              <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3"></i>
+              <input type="text" oninput="App.setTxSearchQuery(this.value)" placeholder="Cari transaksi..."
+                class="w-full pl-8 pr-3 py-2 text-xs rounded-xl bg-white border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
+            </div>
+            
+            <div class="col-span-2">
+              <select onchange="App.setTxFilterCategory(this.value)"
+                class="w-full py-2 px-2 text-xs rounded-xl bg-white border border-slate-200 text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
+                <option value="all">Semua Kategori</option>
+                <optgroup label="Pengeluaran">
+                  <option value="bbm">Bahan Bakar (BBM)</option>
+                  <option value="ganti_oli">Ganti Oli</option>
+                  <option value="sparepart">Sparepart</option>
+                  <option value="servis">Servis Bengkel</option>
+                  <option value="pajak">Pajak & SIM</option>
+                  <option value="cicilan">Cicilan</option>
+                  <option value="parkir_tol">Tol & Parkir</option>
+                  <option value="cuci">Cuci Kendaraan</option>
+                  <option value="lainnya">Pengeluaran Lainnya</option>
+                </optgroup>
+                <optgroup label="Pemasukan">
+                  <option value="pendapatan">Pendapatan / Narik</option>
+                  <option value="sewa">Sewa / Rental</option>
+                  <option value="reimbursement">Klaim / Reimburse</option>
+                  <option value="penjualan_part">Jual Part Bekas</option>
+                  <option value="pemasukan_lain">Pemasukan Lain</option>
+                </optgroup>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Grouped Transaction List -->
+        <div id="tx-list-container" class="space-y-4">
+          <!-- Populated by App.js -->
+        </div>
+
+      </section>
+
+      <!-- ==============================================================
+           4. SERVIS & PART SCREEN (Oli, Sparepart & Dokumen)
+           ============================================================== -->
+      <section id="screen-service" class="view-screen p-4 space-y-4 hidden animate-fade-in">
+        
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-lg font-black text-slate-900">Servis & Sparepart</h2>
+            <p class="text-xs text-slate-500">Pantau kesehatan oli, riwayat part & dokumen</p>
+          </div>
+        </div>
+
+        <!-- Oil Health Tracker Card -->
+        <div class="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm space-y-4">
+          <div class="flex items-start justify-between">
+            <div class="flex items-center space-x-3">
+              <div class="w-11 h-11 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                <i data-lucide="droplet" class="w-6 h-6"></i>
+              </div>
+              <div>
+                <h3 class="text-sm font-bold text-slate-900">Indikator Kesehatan Oli</h3>
+                <p id="oil-target-km" class="text-xs text-slate-400">Target 15.000 KM</p>
+              </div>
+            </div>
+            <span id="oil-status-badge" class="text-xs px-2.5 py-1 rounded-full font-semibold bg-emerald-100 text-emerald-800">
+              Kondisi Prima
+            </span>
+          </div>
+
+          <!-- Remaining KM & Progress Meter -->
+          <div class="space-y-2">
+            <div class="flex items-baseline justify-between">
+              <span id="oil-km-remaining" class="text-xl font-extrabold text-slate-900">Sisa 750 KM lagi</span>
+              <span id="oil-percent-label" class="text-xs font-semibold text-slate-500">75% Terpakai</span>
+            </div>
+            <!-- Progress Bar -->
+            <div class="w-full h-3 rounded-full bg-slate-100 overflow-hidden">
+              <div id="oil-progress-bar" class="h-full rounded-full transition-all duration-500 bg-gradient-to-r from-emerald-500 to-teal-600" style="width: 75%;"></div>
+            </div>
+          </div>
+
+          <!-- Oil Details Footer -->
+          <div class="pt-3 border-t border-slate-100 grid grid-cols-2 gap-2 text-xs">
+            <div>
+              <p class="text-slate-400">Merk / Viskositas Terakhir:</p>
+              <p id="oil-last-brand" class="font-bold text-slate-800 truncate">AHM Oil MPX2 10W-30</p>
+            </div>
+            <div class="text-right">
+              <p class="text-slate-400">Tanggal Penggantian:</p>
+              <p id="oil-last-date" class="font-bold text-slate-800">25 Sep 2026</p>
+            </div>
+          </div>
+
+          <!-- Action Button -->
+          <button onclick="App.openQuickOilModal()"
+            class="w-full py-2.5 rounded-xl bg-gradient-to-r from-[#0A3981] to-[#0B4F9C] text-white text-xs font-bold hover:opacity-95 shadow-sm flex items-center justify-center gap-1.5 active:scale-98">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            <span>Catat Ganti Oli Baru</span>
+          </button>
+        </div>
+
+        <!-- Fuel Consumption & Efficiency Card -->
+        <div class="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm space-y-4">
+          <div class="flex items-start justify-between">
+            <div class="flex items-center space-x-3">
+              <div class="w-11 h-11 rounded-2xl bg-blue-50 text-[#0B4F9C] flex items-center justify-center">
+                <i data-lucide="fuel" class="w-6 h-6"></i>
+              </div>
+              <div>
+                <h3 class="text-sm font-bold text-slate-900">Efisiensi Bahan Bakar (BBM)</h3>
+                <p id="fuel-card-subtitle" class="text-xs text-slate-400">Rata-rata Konsumsi Real-Time</p>
+              </div>
+            </div>
+            <span id="fuel-card-badge" class="text-xs px-2.5 py-1 rounded-full font-semibold bg-emerald-100 text-emerald-800">
+              Sangat Irit
+            </span>
+          </div>
+
+          <!-- Main Stats & Quick Metrics -->
+          <div class="grid grid-cols-3 gap-2 p-3 bg-slate-50/80 rounded-2xl border border-slate-100 text-center">
+            <div>
+              <p class="text-[10px] text-slate-400 font-semibold uppercase">Konsumsi</p>
+              <p id="fuel-card-km-per-l" class="text-sm font-extrabold text-[#0B4F9C] mt-0.5">44.4 KM/L</p>
+            </div>
+            <div class="border-x border-slate-200">
+              <p class="text-[10px] text-slate-400 font-semibold uppercase">Biaya / KM</p>
+              <p id="fuel-card-cost-per-km" class="text-sm font-extrabold text-slate-800 mt-0.5">Rp 281</p>
+            </div>
+            <div>
+              <p class="text-[10px] text-slate-400 font-semibold uppercase">Bulan Ini</p>
+              <p id="fuel-card-monthly-liters" class="text-sm font-extrabold text-slate-800 mt-0.5">7.0 L</p>
+            </div>
+          </div>
+
+          <!-- Dual Action Buttons -->
+          <div class="grid grid-cols-2 gap-2 pt-1">
+            <button onclick="App.openFuelHubModal()"
+              class="py-2.5 rounded-xl border border-[#0B4F9C]/30 bg-blue-50/50 text-[#0B4F9C] text-xs font-bold hover:bg-blue-100/50 flex items-center justify-center gap-1.5 active:scale-98 transition-colors">
+              <i data-lucide="bar-chart-2" class="w-4 h-4"></i>
+              <span>Hub Analisis BBM</span>
+            </button>
+            <button onclick="App.openQuickFuelModal()"
+              class="py-2.5 rounded-xl bg-gradient-to-r from-[#0A3981] to-[#0B4F9C] text-white text-xs font-bold hover:opacity-95 shadow-sm flex items-center justify-center gap-1.5 active:scale-98 transition-all">
+              <i data-lucide="plus" class="w-4 h-4"></i>
+              <span>Catat Isi Bensin</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Sparepart Replacement History Timeline -->
+        <div class="space-y-2.5">
+          <div class="flex items-center justify-between px-0.5">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">Riwayat Penggantian Sparepart</h3>
+            <button onclick="App.openQuickSparepartModal()" class="text-xs font-bold text-[#0B4F9C] hover:underline">
+              + Tambah Part
+            </button>
+          </div>
+          <div id="sparepart-timeline" class="space-y-0">
+            <!-- Populated by App.js -->
+          </div>
+        </div>
+
+        <!-- Vehicle Legal Documents Card -->
+        <div class="space-y-2">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 px-0.5">Dokumen & Pajak Kendaraan</h3>
+          <div id="vehicle-documents-card" class="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm">
+            <!-- Populated by App.js -->
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ==============================================================
+           5. ANALITIK & PROFIL SCREEN
+           ============================================================== -->
+      <section id="screen-analytics" class="view-screen p-4 space-y-5 hidden animate-fade-in">
+        
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-lg font-black text-slate-900">Analitik & Manajemen</h2>
+            <p class="text-xs text-slate-500">Statistik pengeluaran & konfigurasi database</p>
+          </div>
+        </div>
+
+        <!-- Monthly Expense vs Income Bar Chart Card -->
+        <div class="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-bold text-slate-900">Arus Kas 6 Bulan Terakhir</h3>
+            <span class="text-[10px] text-slate-400 font-medium">Bulan Berjalan</span>
+          </div>
+          <div class="h-52 relative">
+            <canvas id="analytics-bar-chart"></canvas>
+          </div>
+        </div>
+
+        <!-- Expense Category Breakdown Donut Chart Card -->
+        <div class="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-bold text-slate-900">Proporsi Pengeluaran</h3>
+            <span class="text-[10px] text-slate-400 font-medium">Berdasarkan Kategori</span>
+          </div>
+          <div class="h-44 relative flex items-center justify-center">
+            <canvas id="analytics-donut-chart"></canvas>
+          </div>
+          <!-- Legend list with percentages -->
+          <div id="donut-legend-container" class="space-y-1">
+            <!-- Populated by charts.js -->
+          </div>
+        </div>
+
+        <!-- Vehicle Efficiency & Cost Metrics -->
+        <div class="grid grid-cols-3 gap-2.5">
+          <div class="bg-white rounded-2xl p-3 border border-slate-100 shadow-sm text-center">
+            <p class="text-[10px] text-slate-400 font-semibold uppercase">Biaya / KM</p>
+            <p id="metric-cost-per-km" class="text-xs font-bold text-slate-800 mt-1">Rp -</p>
+          </div>
+          <div class="bg-white rounded-2xl p-3 border border-slate-100 shadow-sm text-center">
+            <p class="text-[10px] text-slate-400 font-semibold uppercase">Efisiensi BBM</p>
+            <p id="metric-fuel-efficiency" class="text-xs font-bold text-emerald-700 mt-1">42.8 KM/L</p>
+          </div>
+          <div class="bg-white rounded-2xl p-3 border border-slate-100 shadow-sm text-center">
+            <p class="text-[10px] text-slate-400 font-semibold uppercase">Pos Terbesar</p>
+            <p id="metric-top-category" class="text-xs font-bold text-slate-800 mt-1 truncate">Cicilan</p>
+          </div>
+        </div>
+
+        <!-- User Profile Card -->
+        <div id="analytics-user-card" class="bg-white rounded-3xl p-4 border border-slate-100 shadow-sm flex items-center justify-between gap-3">
+          <div class="flex items-center space-x-3">
+            <div id="analytics-user-avatar" class="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#0A3981] to-[#0B4F9C] text-white flex items-center justify-center font-bold text-sm shadow-sm overflow-hidden flex-shrink-0">
+              <span id="analytics-user-initials">BP</span>
+            </div>
+            <div class="min-w-0">
+              <h4 id="analytics-user-name" class="text-xs sm:text-sm font-bold text-slate-900 leading-tight truncate">Budi Pengendara</h4>
+              <p id="analytics-user-email" class="text-[11px] text-slate-500 truncate">budi@gmail.com</p>
+              <span id="analytics-user-badge" class="inline-block mt-0.5 text-[9px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700">Mode Demo / Tamu</span>
+            </div>
+          </div>
+          <button onclick="App.confirmLogout()" 
+            class="px-3 py-1.5 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-semibold flex items-center gap-1 active:scale-95 transition-all flex-shrink-0">
+            <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+            <span>Keluar</span>
+          </button>
+        </div>
+
+        <!-- PWA Home Screen Installation Card -->
+        <div class="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-2.5">
+              <div class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center flex-shrink-0">
+                <i data-lucide="smartphone" class="w-4 h-4"></i>
+              </div>
+              <div>
+                <h3 class="text-sm font-bold text-slate-900">Aplikasi Layar Utama (Homescreen)</h3>
+                <p class="text-[10px] text-slate-400">Jadikan aplikasi native di ponsel</p>
+              </div>
+            </div>
+            <span id="pwa-status-badge" class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-50 text-amber-700">
+              Tersedia
+            </span>
+          </div>
+
+          <p class="text-xs text-slate-500 leading-relaxed">
+            Pasang KendaraTrack langsung di layar awal (Home Screen) smartphone Anda. Cepat dibuka, tanpa bar URL browser, dan hemat kuota.
+          </p>
+
+          <button type="button" onclick="App.triggerPWAInstall()"
+            class="w-full py-2.5 rounded-xl bg-gradient-to-r from-[#0A3981] to-[#0B4F9C] text-white text-xs font-bold shadow-md hover:shadow-lg active:scale-98 transition-all flex items-center justify-center gap-2">
+            <i data-lucide="download-cloud" class="w-4 h-4"></i>
+            <span>Tambahkan ke Layar Utama HP</span>
+          </button>
+        </div>
+
+        <!-- Vehicle Fleet Management -->
+        <div class="space-y-2.5">
+          <div class="flex items-center justify-between px-0.5">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">Garasi Kendaraan</h3>
+            <button onclick="App.openAddVehicleModal()" class="text-xs font-bold text-[#0B4F9C] hover:underline">
+              + Tambah Kendaraan
+            </button>
+          </div>
+          <div id="analytics-vehicle-list" class="space-y-2">
+            <!-- Populated by App.js -->
+          </div>
+        </div>
+
+        <!-- Data Migration & Database Configuration Accordion -->
+        <div class="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm space-y-4">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-2.5">
+              <div class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
+                <i data-lucide="database" class="w-4 h-4"></i>
+              </div>
+              <h3 class="text-sm font-bold text-slate-900">Penyimpanan & Sinkronisasi</h3>
+            </div>
+            <span class="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md font-semibold">
+              Repository Pattern
+            </span>
+          </div>
+
+          <!-- Cloud Database Status Card (Safe, Encrypted, Hidden Credentials) -->
+          <div class="p-3.5 bg-gradient-to-r from-blue-50/90 to-indigo-50/70 border border-blue-150 rounded-2xl space-y-2.5">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-xl bg-[#0B4F9C] text-white flex items-center justify-center flex-shrink-0">
+                  <i data-lucide="cloud" class="w-4 h-4"></i>
+                </div>
+                <div>
+                  <h4 class="text-xs font-bold text-slate-900">Cloud Sync & Storage</h4>
+                  <p class="text-[10px] text-slate-500">Tersinkronisasi otomatis antar perangkat</p>
+                </div>
+              </div>
+              <span class="text-[10px] px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-full font-bold flex items-center gap-1 border border-emerald-200">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                Terenkripsi
+              </span>
+            </div>
+
+            <p class="text-[11px] text-slate-600 leading-relaxed">
+              Seluruh data kendaraan, riwayat servis, bensin, dan rute GPS Anda tersimpan secara aman di Cloud Database. Kredensial server diamankan dan terenkripsi di sistem aplikasi.
+            </p>
+
+            <div class="flex items-center gap-2 pt-0.5">
+              <button type="button" onclick="App.testDatabaseConnection()"
+                class="flex-1 py-2 px-3 rounded-xl bg-white border border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-50 transition-all active:scale-98 flex items-center justify-center gap-1.5 shadow-2xs">
+                <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-[#0B4F9C]"></i>
+                <span>Uji Status Server Cloud</span>
+              </button>
+            </div>
+            <div id="db-connection-status"></div>
+          </div>
+
+          <!-- Tombol Salin Tautan Aplikasi untuk HP (Clean URL) -->
+          <div class="pt-1 space-y-1">
+            <button type="button" onclick="App.copySyncLinkForMobile()"
+              class="w-full py-2.5 rounded-xl border border-blue-200 bg-blue-50/70 hover:bg-blue-100/70 text-blue-900 text-xs font-bold transition-all flex items-center justify-center gap-2 active:scale-98">
+              <i data-lucide="smartphone" class="w-4 h-4 text-[#0B4F9C]"></i>
+              <span>📲 Salin Tautan Aplikasi untuk HP</span>
+            </button>
+            <p class="text-[10px] text-slate-400 text-center leading-tight">
+              Kirim tautan ini ke HP Anda untuk membuka KendaraTrack di mana saja tanpa perlu memasukkan kunci database.
+            </p>
+          </div>
+
+          <!-- Developer / Owner Credentials Panel (Hidden by Default) -->
+          <div class="pt-2 border-t border-slate-100">
+            <button type="button" onclick="App.toggleDevConfig()"
+              class="w-full text-[11px] text-slate-400 hover:text-slate-600 font-semibold flex items-center justify-center gap-1.5 py-1">
+              <i data-lucide="lock" class="w-3 h-3"></i>
+              <span id="dev-config-toggle-label">⚙️ Konfigurasi Pengembang (Terkunci)</span>
+            </button>
+
+            <div id="dev-db-config-section" class="hidden mt-3 p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
+              <p class="text-[10.5px] text-slate-500 font-medium">
+                ⚠️ <em>Khusus pemilik aplikasi: Anda dapat mengganti instance database atau beralih mode.</em>
+              </p>
+              
+              <div class="space-y-1">
+                <label class="text-xs font-bold text-slate-700">Database Provider:</label>
+                <select id="db-provider-select" onchange="App.toggleDbProviderInputs(this.value)"
+                  class="w-full py-2 px-3 text-xs rounded-xl bg-white border border-slate-200 text-slate-800 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20">
+                  <option value="SUPABASE">1. Supabase PostgreSQL (Production Cloud)</option>
+                  <option value="LOCAL_DEMO">2. Penyimpanan Lokal (Demo Offline)</option>
+                  <option value="GAS">3. Google Apps Script (Spreadsheet DB)</option>
+                </select>
+              </div>
+
+              <!-- GAS Configuration Inputs -->
+              <div id="db-gas-config-section" class="space-y-2 hidden">
+                <label class="text-[11px] font-bold text-slate-600">Google Apps Script URL:</label>
+                <input type="url" id="db-gas-url-input" placeholder="https://script.google.com/macros/s/.../exec"
+                  class="w-full p-2.5 text-xs rounded-xl bg-white border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20">
+              </div>
+
+              <!-- Supabase Configuration Inputs -->
+              <div id="db-supabase-config-section" class="space-y-2">
+                <label class="text-[11px] font-bold text-slate-600">Supabase URL & Anon API Key:</label>
+                <input type="password" id="db-supabase-url-input" placeholder="https://xyzproject.supabase.co"
+                  class="w-full p-2.5 text-xs rounded-xl bg-white border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 font-mono">
+                <input type="password" id="db-supabase-key-input" placeholder="Supabase Anon Key"
+                  class="w-full p-2.5 text-xs rounded-xl bg-white border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 font-mono">
+              </div>
+
+              <button onclick="App.saveDatabaseSettings()"
+                class="w-full py-2 rounded-xl bg-[#0B4F9C] text-white text-xs font-bold hover:bg-[#093E7A] shadow-sm transition-all active:scale-98">
+                Simpan Perubahan Database
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Data Export & Reset -->
+        <div class="space-y-2 pt-1">
+          <button onclick="App.exportDataCSV()"
+            class="w-full py-2.5 rounded-2xl bg-white border border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-50 shadow-sm flex items-center justify-center gap-1.5 transition-all">
+            <i data-lucide="download" class="w-4 h-4 text-emerald-700"></i>
+            <span>Unduh Seluruh Data (CSV)</span>
+          </button>
+
+          <button onclick="App.resetDemoData()"
+            class="w-full py-2.5 rounded-2xl bg-slate-100 hover:bg-rose-50 hover:text-rose-700 text-slate-500 text-xs font-medium flex items-center justify-center gap-1.5 transition-all">
+            <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+            <span>Reset ke Sampel Demo Awal</span>
+          </button>
+        </div>
+
+      </section>
+
+    </main>
+
+    <!-- ==============================================================
+         FIXED BOTTOM NAVIGATION BAR (5 Tabs)
+         ============================================================== -->
+    <nav class="fixed bottom-0 left-0 right-0 z-50 glass-nav px-2 py-1.5">
+      <div class="max-w-[440px] mx-auto grid grid-cols-5 gap-1">
+        
+        <!-- Tab 1: Home -->
+        <button onclick="App.switchTab('home')" data-tab="home"
+          class="nav-tab-btn flex flex-col items-center justify-center py-1 text-slate-400 transition-all">
+          <div class="nav-icon-wrap w-8 h-8 rounded-xl flex items-center justify-center transition-all">
+            <i data-lucide="home" class="w-4 h-4"></i>
+          </div>
+          <span class="nav-label text-[10px] mt-0.5 font-medium">Home</span>
+        </button>
+
+        <!-- Tab 2: Kalender -->
+        <button onclick="App.switchTab('calendar')" data-tab="calendar"
+          class="nav-tab-btn flex flex-col items-center justify-center py-1 text-slate-400 transition-all">
+          <div class="nav-icon-wrap w-8 h-8 rounded-xl flex items-center justify-center transition-all">
+            <i data-lucide="calendar" class="w-4 h-4"></i>
+          </div>
+          <span class="nav-label text-[10px] mt-0.5 font-medium">Kalender</span>
+        </button>
+
+        <!-- Tab 3: Transaksi -->
+        <button onclick="App.switchTab('transactions')" data-tab="transactions"
+          class="nav-tab-btn flex flex-col items-center justify-center py-1 text-slate-400 transition-all">
+          <div class="nav-icon-wrap w-8 h-8 rounded-xl flex items-center justify-center transition-all">
+            <i data-lucide="receipt" class="w-4 h-4"></i>
+          </div>
+          <span class="nav-label text-[10px] mt-0.5 font-medium">Transaksi</span>
+        </button>
+
+        <!-- Tab 4: Servis & Part -->
+        <button onclick="App.switchTab('service')" data-tab="service"
+          class="nav-tab-btn flex flex-col items-center justify-center py-1 text-slate-400 transition-all">
+          <div class="nav-icon-wrap w-8 h-8 rounded-xl flex items-center justify-center transition-all">
+            <i data-lucide="wrench" class="w-4 h-4"></i>
+          </div>
+          <span class="nav-label text-[10px] mt-0.5 font-medium">Servis</span>
+        </button>
+
+        <!-- Tab 5: Analitik -->
+        <button onclick="App.switchTab('analytics')" data-tab="analytics"
+          class="nav-tab-btn flex flex-col items-center justify-center py-1 text-slate-400 transition-all">
+          <div class="nav-icon-wrap w-8 h-8 rounded-xl flex items-center justify-center transition-all">
+            <i data-lucide="pie-chart" class="w-4 h-4"></i>
+          </div>
+          <span class="nav-label text-[10px] mt-0.5 font-medium">Analitik</span>
+        </button>
+
+      </div>
+    </nav>
+
+  </div>
+
+  <!-- ==============================================================
+       MODALS & DIALOGS
+       ============================================================== -->
+
+  <!-- Modal 1: Quick Update Odometer (KM) -->
+  <div id="modal-update-km" class="modal-backdrop fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 hidden">
+    <div class="w-full max-w-sm bg-white rounded-t-3xl sm:rounded-3xl p-5 shadow-2xl animate-fade-in space-y-4">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+        <h3 class="text-sm font-bold text-slate-900">Update Odometer (KM)</h3>
+        <button onclick="App.closeModal('modal-update-km')" class="text-slate-400 hover:text-slate-700">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form onsubmit="App.submitUpdateKm(event)" class="space-y-4">
+        <div>
+          <label class="text-xs font-semibold text-slate-500">KM Saat Ini:</label>
+          <p id="modal-update-km-current" class="text-lg font-extrabold text-emerald-800">14.250 KM</p>
+        </div>
+
+        <div>
+          <label class="text-xs font-semibold text-slate-700">Odometer Baru (KM):</label>
+          <input type="number" id="modal-update-km-input" required min="0" step="1"
+            class="w-full mt-1 p-3 rounded-2xl bg-slate-50 border border-slate-200 text-lg font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
+        </div>
+
+        <div class="flex items-center space-x-2 pt-2">
+          <button type="button" onclick="App.closeModal('modal-update-km')"
+            class="flex-1 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600">
+            Batal
+          </button>
+          <button type="submit"
+            class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-[#0A3981] to-[#0B4F9C] text-white text-xs font-bold shadow-md">
+            Simpan KM
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 2: Add / Edit Transaction -->
+  <div id="modal-transaction" class="modal-backdrop fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 hidden">
+    <div class="w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl p-5 shadow-2xl animate-fade-in max-h-[90vh] overflow-y-auto space-y-4">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+        <h3 id="tx-modal-title" class="text-sm font-bold text-slate-900">Tambah Transaksi</h3>
+        <button onclick="App.closeModal('modal-transaction')" class="text-slate-400 hover:text-slate-700">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form id="tx-form" onsubmit="App.submitTransactionForm(event)" class="space-y-3.5">
+        <input type="hidden" id="tx-form-type" value="pengeluaran">
+
+        <!-- Type Selector (Pengeluaran / Pemasukan) -->
+        <div class="flex items-center space-x-2 p-1 bg-slate-100 rounded-2xl">
+          <button type="button" id="tx-type-btn-out" onclick="App.setTransactionTypeInForm('pengeluaran')"
+            class="flex-1 py-2 text-xs font-bold rounded-xl bg-gradient-to-r from-[#0A3981] to-[#0B4F9C] text-white shadow-sm transition-all">
+            Pengeluaran
+          </button>
+          <button type="button" id="tx-type-btn-in" onclick="App.setTransactionTypeInForm('pemasukan')"
+            class="flex-1 py-2 text-xs font-medium rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all">
+            Pemasukan
+          </button>
+        </div>
+
+        <!-- Category Dropdown -->
+        <div>
+          <label id="tx-form-category-label" class="text-xs font-semibold text-slate-700">Kategori Pengeluaran</label>
+          <select id="tx-form-category" onchange="App.handleTransactionCategoryChange(this.value)" required
+            class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200 text-slate-800 font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
+            <!-- Dynamically populated based on Pengeluaran or Pemasukan -->
+          </select>
+        </div>
+
+        <!-- Quick Maintenance Shortcut Reminder (Shown only for Pengeluaran) -->
+        <div id="tx-maintenance-hint" class="p-2.5 rounded-2xl bg-emerald-50/70 border border-emerald-100 flex items-center justify-between text-xs text-slate-700 transition-all">
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0">
+              <i data-lucide="info" class="w-3.5 h-3.5"></i>
+            </span>
+            <span class="text-[11px] text-slate-600 truncate">Oli, sparepart, atau jadwal servis?</span>
+          </div>
+          <div class="flex items-center gap-1.5 font-bold text-[11px] shrink-0">
+            <button type="button" onclick="App.switchToDedicatedModal('oli')" title="Pindah ke Form Ganti Oli"
+              class="px-2 py-1 rounded-lg bg-white border border-emerald-200 text-emerald-800 hover:bg-emerald-100 transition-colors shadow-2xs">
+              + Oli
+            </button>
+            <button type="button" onclick="App.switchToDedicatedModal('sparepart')" title="Pindah ke Form Ganti Sparepart"
+              class="px-2 py-1 rounded-lg bg-white border border-emerald-200 text-emerald-800 hover:bg-emerald-100 transition-colors shadow-2xs">
+              + Part
+            </button>
+            <button type="button" onclick="App.switchToDedicatedModal('jadwal')" title="Pindah ke Form Tambah Jadwal Servis"
+              class="px-2 py-1 rounded-lg bg-white border border-emerald-200 text-emerald-800 hover:bg-emerald-100 transition-colors shadow-2xs">
+              + Jadwal
+            </button>
+          </div>
+        </div>
+
+        <!-- Amount Input -->
+        <div>
+          <label class="text-xs font-semibold text-slate-700">Nominal (Rp)</label>
+          <input type="number" id="tx-form-amount" placeholder="0" required min="0" step="any"
+            class="w-full mt-1 p-3 text-base font-extrabold rounded-xl bg-slate-50 border border-slate-200 text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
+        </div>
+
+        <!-- Date & Odometer Row -->
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-xs font-semibold text-slate-700">Tanggal</label>
+            <input type="date" id="tx-form-date" required
+              class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200 text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
+          </div>
+          <div>
+            <label class="text-xs font-semibold text-slate-700">Odometer (KM)</label>
+            <input type="number" id="tx-form-odometer" placeholder="Contoh: 14250"
+              class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200 text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
+          </div>
+        </div>
+
+        <!-- Optional BBM Helper Section -->
+        <div id="tx-fuel-details-section" class="p-3 rounded-2xl bg-blue-50/70 border border-blue-100 space-y-2">
+          <p class="text-[11px] font-bold text-blue-800 flex items-center gap-1">
+            <i data-lucide="fuel" class="w-3.5 h-3.5"></i> Detail Konsumsi BBM
+          </p>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="text-[10px] text-slate-600 font-semibold">Jumlah Liter</label>
+              <input type="number" id="tx-form-fuel-liters" placeholder="Misal: 3.5" step="0.01"
+                class="w-full mt-0.5 p-2 text-xs rounded-lg bg-white border border-blue-200">
+            </div>
+            <div>
+              <label class="text-[10px] text-slate-600 font-semibold">Jenis Bahan Bakar</label>
+              <select id="tx-form-fuel-type"
+                class="w-full mt-0.5 p-2 text-xs rounded-lg bg-white border border-blue-200">
+                <option value="Pertamax">Pertamax (RON 92)</option>
+                <option value="Pertalite">Pertalite (RON 90)</option>
+                <option value="Pertamax Turbo">Pertamax Turbo (RON 98)</option>
+                <option value="Shell Super">Shell Super</option>
+                <option value="Shell V-Power">Shell V-Power</option>
+                <option value="Solar / Dexlite">Solar / Dexlite</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Notes / Bengkel -->
+        <div>
+          <label class="text-xs font-semibold text-slate-700">Catatan / Keterangan</label>
+          <input type="text" id="tx-form-notes" placeholder="Contoh: Bensin full tank / ganti oli rutin"
+            class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200 text-slate-800 focus:outline-none">
+        </div>
+
+        <div>
+          <label id="tx-form-bengkel-label" class="text-xs font-semibold text-slate-700">Nama Toko / Bengkel / SPBU (Opsional)</label>
+          <input type="text" id="tx-form-bengkel" placeholder="Contoh: SPBU Pertamina / AHASS"
+            class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200 text-slate-800 focus:outline-none">
+        </div>
+
+        <div>
+          <label class="text-xs font-semibold text-slate-700">Foto Struk / Nota Pembayaran (Opsional)</label>
+          <input type="file" id="tx-form-photo" accept="image/*"
+            class="w-full mt-1 text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-[#0B4F9C]">
+        </div>
+
+        <div class="flex items-center space-x-2 pt-2">
+          <button type="button" onclick="App.closeModal('modal-transaction')"
+            class="flex-1 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600">
+            Batal
+          </button>
+          <button type="submit"
+            class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-[#0A3981] to-[#0B4F9C] text-white text-xs font-bold shadow-md">
+            Simpan Transaksi
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 3: Quick Ganti Oli -->
+  <div id="modal-quick-oil" class="modal-backdrop fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 hidden">
+    <div class="w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl p-5 shadow-2xl animate-fade-in space-y-4">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+        <h3 class="text-sm font-bold text-slate-900">Catat Penggantian Oli</h3>
+        <button onclick="App.closeModal('modal-quick-oil')" class="text-slate-400 hover:text-slate-700">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form id="oil-form" onsubmit="App.submitQuickOilForm(event)" class="space-y-3">
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-xs font-semibold text-slate-700">Tanggal Ganti</label>
+            <input type="date" id="oil-form-date" required
+              class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200">
+          </div>
+          <div>
+            <label class="text-xs font-semibold text-slate-700">Odometer (KM) Saat Ini</label>
+            <input type="number" id="oil-form-odometer" required
+              class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200">
+          </div>
+        </div>
+
+        <div>
+          <label class="text-xs font-semibold text-slate-700">Merk & Viskositas Oli</label>
+          <input type="text" id="oil-form-brand" placeholder="Misal: Shell Advance AX7 10W-40" required
+            class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200">
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-xs font-semibold text-slate-700">Biaya Penggantian (Rp)</label>
+            <input type="number" id="oil-form-cost" placeholder="70000" min="0" step="any"
+              class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200 font-bold">
+          </div>
+          <div>
+            <label class="text-xs font-semibold text-slate-700">Nama Bengkel</label>
+            <input type="text" id="oil-form-workshop" placeholder="Misal: AHASS Surya Motor"
+              class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200">
+          </div>
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between">
+            <label class="text-xs font-semibold text-slate-700 flex items-center gap-1">
+              <i data-lucide="map-pin" class="w-3.5 h-3.5 text-emerald-600"></i> Lokasi / Alamat Bengkel (Google Maps)
+            </label>
+            <button type="button" onclick="App.detectCurrentLocation('oil-form-workshop-address')" 
+              class="text-[10px] text-emerald-700 hover:text-emerald-800 font-bold flex items-center gap-1 py-0.5 px-2 rounded-md bg-emerald-50 hover:bg-emerald-100 transition-colors">
+              <i data-lucide="crosshair" class="w-3 h-3"></i> 📍 GPS Sekarang
+            </button>
+          </div>
+          <div class="relative mt-1">
+            <input type="text" id="oil-form-workshop-address" placeholder="Jl. Rungkut Madya No. 45, Surabaya"
+              class="w-full p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200 pr-9">
+            <button type="button" onclick="App.searchLocationInMaps('oil-form-workshop', 'oil-form-workshop-address')" 
+              title="Cari di Google Maps" class="absolute right-2.5 top-2.5 text-slate-400 hover:text-emerald-700">
+              <i data-lucide="external-link" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <label class="text-xs font-semibold text-slate-700">Catatan Tambahan</label>
+          <input type="text" id="oil-form-notes" placeholder="Termasuk oli gardan / filter oli"
+            class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200">
+        </div>
+
+        <div>
+          <label class="text-xs font-semibold text-slate-700">Foto Botol Oli / Nota (Opsional)</label>
+          <input type="file" id="oil-form-photo" accept="image/*"
+            class="w-full mt-1 text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-[#0B4F9C]">
+        </div>
+
+        <div class="flex items-center space-x-2 pt-2">
+          <button type="button" onclick="App.closeModal('modal-quick-oil')"
+            class="flex-1 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600">
+            Batal
+          </button>
+          <button type="submit"
+            class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-[#0A3981] to-[#0B4F9C] text-white text-xs font-bold shadow-md">
+            Simpan Log Oli
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 4: Quick Sparepart -->
+  <div id="modal-quick-sparepart" class="modal-backdrop fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 hidden">
+    <div class="w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl p-5 shadow-2xl animate-fade-in space-y-4">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+        <h3 class="text-sm font-bold text-slate-900">Catat Penggantian Sparepart</h3>
+        <button onclick="App.closeModal('modal-quick-sparepart')" class="text-slate-400 hover:text-slate-700">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form id="part-form" onsubmit="App.submitQuickSparepartForm(event)" class="space-y-3">
+        <div>
+          <label class="text-xs font-semibold text-slate-700">Nama Sparepart / Komponen</label>
+          <input type="text" id="part-form-name" placeholder="Misal: Kampas Rem Depan / V-Belt" required
+            class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200">
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-xs font-semibold text-slate-700">Merk / Kode Part</label>
+            <input type="text" id="part-form-brand" placeholder="Misal: Honda Genuine Part"
+              class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200">
+          </div>
+          <div>
+            <label class="text-xs font-semibold text-slate-700">Odometer Terpasang</label>
+            <input type="number" id="part-form-odometer" placeholder="14250"
+              class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-xs font-semibold text-slate-700">Tanggal Pasang</label>
+            <input type="date" id="part-form-date" required
+              class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200">
+          </div>
+          <div>
+            <label class="text-xs font-semibold text-slate-700">Total Biaya (Rp)</label>
+            <input type="number" id="part-form-cost" placeholder="85000" min="0" step="any"
+              class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200 font-bold">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-xs font-semibold text-slate-700">Garansi / Usia Pakai</label>
+            <input type="text" id="part-form-warranty" placeholder="6 Bulan / 10.000 KM"
+              class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200">
+          </div>
+          <div>
+            <label class="text-xs font-semibold text-slate-700">Nama Bengkel</label>
+            <input type="text" id="part-form-workshop" placeholder="Misal: AHASS Surya Motor"
+              class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200">
+          </div>
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between">
+            <label class="text-xs font-semibold text-slate-700 flex items-center gap-1">
+              <i data-lucide="map-pin" class="w-3.5 h-3.5 text-emerald-600"></i> Lokasi / Alamat Bengkel (Google Maps)
+            </label>
+            <button type="button" onclick="App.detectCurrentLocation('part-form-workshop-address')" 
+              class="text-[10px] text-emerald-700 hover:text-emerald-800 font-bold flex items-center gap-1 py-0.5 px-2 rounded-md bg-emerald-50 hover:bg-emerald-100 transition-colors">
+              <i data-lucide="crosshair" class="w-3 h-3"></i> 📍 GPS Sekarang
+            </button>
+          </div>
+          <div class="relative mt-1">
+            <input type="text" id="part-form-workshop-address" placeholder="Jl. Rungkut Asri Timur No. 12, Surabaya"
+              class="w-full p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200 pr-9">
+            <button type="button" onclick="App.searchLocationInMaps('part-form-workshop', 'part-form-workshop-address')" 
+              title="Cari di Google Maps" class="absolute right-2.5 top-2.5 text-slate-400 hover:text-emerald-700">
+              <i data-lucide="external-link" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <label class="text-xs font-semibold text-slate-700">Catatan</label>
+          <input type="text" id="part-form-notes" placeholder="Kondisi part lama aus"
+            class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200">
+        </div>
+
+        <div>
+          <label class="text-xs font-semibold text-slate-700">Foto Sparepart / Nota Bengkel (Opsional)</label>
+          <input type="file" id="part-form-photo" accept="image/*"
+            class="w-full mt-1 text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-[#0B4F9C]">
+        </div>
+
+        <div class="flex items-center space-x-2 pt-2">
+          <button type="button" onclick="App.closeModal('modal-quick-sparepart')"
+            class="flex-1 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600">
+            Batal
+          </button>
+          <button type="submit"
+            class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-[#0A3981] to-[#0B4F9C] text-white text-xs font-bold shadow-md">
+            Simpan Sparepart
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 5: Add / Edit Schedule / Reminder -->
+  <div id="modal-add-schedule" class="modal-backdrop fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 hidden">
+    <div class="w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl p-5 shadow-2xl animate-fade-in space-y-4">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+        <h3 id="sch-modal-title" class="text-sm font-bold text-slate-900">Tambah Jadwal Pengingat</h3>
+        <button onclick="App.closeModal('modal-add-schedule')" class="text-slate-400 hover:text-slate-700">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form id="sch-form" onsubmit="App.submitScheduleForm(event)" class="space-y-3">
+        <input type="hidden" id="sch-form-id">
+        <div>
+          <label class="text-xs font-semibold text-slate-700">Judul Pengingat</label>
+          <input type="text" id="sch-form-title" placeholder="Misal: Pajak STNK Tahunan / Ganti Oli" required
+            class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200">
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-xs font-semibold text-slate-700">Kategori</label>
+            <select id="sch-form-category"
+              class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200 font-semibold">
+              <option value="oli">Ganti Oli</option>
+              <option value="pajak">Pajak STNK / SIM</option>
+              <option value="cicilan">Cicilan / Tagihan</option>
+              <option value="servis">Servis Rutin</option>
+              <option value="lainnya">Lainnya</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-xs font-semibold text-slate-700">Jatuh Tempo Tanggal</label>
+            <input type="date" id="sch-form-date" required
+              class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-xs font-semibold text-slate-700">Target KM (Opsional)</label>
+            <input type="number" id="sch-form-km" placeholder="Misal: 15000"
+              class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200">
+          </div>
+          <div>
+            <label class="text-xs font-semibold text-slate-700">Estimasi Biaya (Rp)</label>
+            <input type="number" id="sch-form-cost" placeholder="Misal: 365000" min="0" step="any"
+              class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200 font-bold">
+          </div>
+        </div>
+
+        <!-- Recurring Option -->
+        <div class="p-3 bg-slate-50 rounded-2xl border border-slate-100 space-y-2">
+          <label class="flex items-center space-x-2 cursor-pointer">
+            <input type="checkbox" id="sch-form-recurring" checked class="w-4 h-4 text-[#0B4F9C] rounded">
+            <span class="text-xs font-bold text-slate-800">Berulang Otomatis (Recurring)</span>
+          </label>
+          <div class="flex items-center space-x-2 text-xs">
+            <span class="text-slate-500">Ulangi setiap:</span>
+            <select id="sch-form-recur-months" class="p-1 rounded-lg border border-slate-200 bg-white font-semibold">
+              <option value="1">1 Bulan (Cicilan bulanan)</option>
+              <option value="2">2 Bulan (Oli motor)</option>
+              <option value="6">6 Bulan (Oli mobil / Servis)</option>
+              <option value="12" selected>12 Bulan (Pajak Tahunan STNK)</option>
+              <option value="60">60 Bulan (5 Tahun - Kaleng / SIM)</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="text-xs font-semibold text-slate-700">Catatan</label>
+          <input type="text" id="sch-form-notes" placeholder="Catatan dokumen pendukung / syarat Samsat"
+            class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200">
+        </div>
+
+        <div class="flex items-center space-x-2 pt-2">
+          <button type="button" onclick="App.closeModal('modal-add-schedule')"
+            class="flex-1 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600">
+            Batal
+          </button>
+          <button type="submit"
+            class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-[#0A3981] to-[#0B4F9C] text-white text-xs font-bold shadow-md hover:shadow-lg active:scale-98 transition-all flex items-center justify-center gap-1.5">
+            <i data-lucide="check" class="w-4 h-4"></i>
+            <span id="sch-modal-submit-text">Simpan Jadwal</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 6: Selesai & Bayar Schedule Pre-filled Modal -->
+  <div id="modal-pay-schedule" class="modal-backdrop fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 hidden">
+    <div class="w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl p-5 shadow-2xl animate-fade-in space-y-4">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+        <div>
+          <h3 class="text-sm font-bold text-slate-900">Selesaikan & Catat Pembayaran</h3>
+          <p id="pay-sch-category-label" class="text-[11px] text-emerald-800 font-semibold mt-0.5">Pajak STNK</p>
+        </div>
+        <button onclick="App.closeModal('modal-pay-schedule')" class="text-slate-400 hover:text-slate-700">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="p-3 bg-emerald-50 rounded-2xl border border-emerald-100">
+        <p class="text-xs text-slate-500">Agenda:</p>
+        <h4 id="pay-sch-title" class="text-sm font-bold text-slate-900 mt-0.5">Pajak STNK Tahunan</h4>
+        <p class="text-[11px] text-emerald-800 mt-1">
+          ✅ Menyelesaikan jadwal ini akan otomatis mencatat pengeluaran kas dan membuat jadwal periode berikutnya bila berulang.
+        </p>
+      </div>
+
+      <form id="pay-sch-form" onsubmit="App.submitPayScheduleForm(event)" class="space-y-3">
+        <input type="hidden" id="pay-sch-id">
+
+        <div>
+          <label class="text-xs font-semibold text-slate-700">Nominal Pembayaran Real (Rp)</label>
+          <input type="number" id="pay-sch-amount" required min="0" step="any"
+            class="w-full mt-1 p-3 text-lg font-black rounded-xl bg-slate-50 border border-slate-200 text-slate-900">
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-xs font-semibold text-slate-700">Tanggal Bayar</label>
+            <input type="date" id="pay-sch-date" required
+              class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200">
+          </div>
+          <div>
+            <label class="text-xs font-semibold text-slate-700">Odometer Terkini (KM)</label>
+            <input type="number" id="pay-sch-odometer"
+              class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200">
+          </div>
+        </div>
+
+        <div>
+          <label class="text-xs font-semibold text-slate-700">Lokasi / Kantor / Bengkel</label>
+          <input type="text" id="pay-sch-bengkel" placeholder="Contoh: Samsat Manyar / Bengkel Resmi"
+            class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200">
+        </div>
+
+        <div>
+          <label class="text-xs font-semibold text-slate-700">Catatan Tambahan</label>
+          <input type="text" id="pay-sch-notes" placeholder="Catatan kwitansi / bukti pembayaran"
+            class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200">
+        </div>
+
+        <div class="flex items-center space-x-2 pt-2">
+          <button type="button" onclick="App.closeModal('modal-pay-schedule')"
+            class="flex-1 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600">
+            Batal
+          </button>
+          <button type="submit"
+            class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-[#0A3981] to-[#0B4F9C] text-white text-xs font-bold shadow-md">
+            Konfirmasi & Lunasi
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 7: Add Vehicle -->
+  <div id="modal-add-vehicle" class="modal-backdrop fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 hidden">
+    <div class="w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl p-5 shadow-2xl animate-fade-in max-h-[90vh] overflow-y-auto space-y-4">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+        <h3 class="text-sm font-bold text-slate-900">Tambah Kendaraan Baru</h3>
+        <button onclick="App.closeModal('modal-add-vehicle')" class="text-slate-400 hover:text-slate-700">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form id="vehicle-form" onsubmit="App.submitAddVehicleForm(event)" class="space-y-3">
+        <div>
+          <label class="text-xs font-semibold text-slate-700">Nama / Model Kendaraan</label>
+          <input type="text" id="veh-form-name" placeholder="Misal: Honda Scoopy Prestige" required
+            class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200">
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-xs font-semibold text-slate-700">Plat Nomor</label>
+            <input type="text" id="veh-form-plate" placeholder="L 5678 CD" required
+              class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200 uppercase font-bold">
+          </div>
+          <div>
+            <label class="text-xs font-semibold text-slate-700">Tipe Kendaraan</label>
+            <select id="veh-form-type" class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200 font-semibold">
+              <option value="motor">Sepeda Motor</option>
+              <option value="mobil">Mobil</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-xs font-semibold text-slate-700">Tahun Pembuatan</label>
+            <input type="number" id="veh-form-year" value="2023" min="1990" max="2030"
+              class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200">
+          </div>
+          <div>
+            <label class="text-xs font-semibold text-slate-700">Odometer Terkini (KM)</label>
+            <input type="number" id="veh-form-km" placeholder="5000"
+              class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200 font-bold">
+          </div>
+        </div>
+
+        <div>
+          <label class="text-xs font-semibold text-slate-700">Interval Ganti Oli (KM)</label>
+          <input type="number" id="veh-form-oil-interval" value="3000"
+            class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200">
+        </div>
+
+        <!-- Document Expiry Dates -->
+        <div class="p-3 bg-slate-50 rounded-2xl border border-slate-100 space-y-2">
+          <p class="text-[11px] font-bold text-slate-800">Tanggal Legalitas & Dokumen</p>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="text-[10px] text-slate-600">Pajak Tahunan STNK</label>
+              <input type="date" id="veh-form-tax-annual" class="w-full p-2 text-xs rounded-lg border border-slate-200 bg-white">
+            </div>
+            <div>
+              <label class="text-[10px] text-slate-600">Pajak 5 Tahunan</label>
+              <input type="date" id="veh-form-tax-5year" class="w-full p-2 text-xs rounded-lg border border-slate-200 bg-white">
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="text-[10px] text-slate-600">Tipe SIM Pengemudi</label>
+              <select id="veh-form-sim-type" class="w-full p-2 text-xs rounded-lg border border-slate-200 bg-white">
+                <option value="SIM C">SIM C (Motor)</option>
+                <option value="SIM A">SIM A (Mobil)</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-[10px] text-slate-600">Masa Berlaku SIM</label>
+              <input type="date" id="veh-form-sim-expiry" class="w-full p-2 text-xs rounded-lg border border-slate-200 bg-white">
+            </div>
+          </div>
+        </div>
+
+        <!-- Photo Uploads for New Vehicle -->
+        <div class="p-3 bg-slate-50 rounded-2xl border border-slate-100 space-y-2">
+          <p class="text-[11px] font-bold text-slate-800 flex items-center gap-1.5">
+            <i data-lucide="camera" class="w-3.5 h-3.5 text-emerald-700"></i> Unggah Foto Fisik Dokumen (Opsional)
+          </p>
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <div>
+              <label class="text-[10px] text-slate-600 font-semibold">Foto Kendaraan</label>
+              <input type="file" id="veh-form-photo-vehicle" accept="image/*" class="w-full mt-0.5 text-[11px] text-slate-500 file:mr-1 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-[10px] file:font-semibold file:bg-blue-50 file:text-[#0B4F9C]">
+            </div>
+            <div>
+              <label class="text-[10px] text-slate-600 font-semibold">Foto SIM</label>
+              <input type="file" id="veh-form-photo-sim" accept="image/*" class="w-full mt-0.5 text-[11px] text-slate-500 file:mr-1 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-[10px] file:font-semibold file:bg-blue-50 file:text-[#0B4F9C]">
+            </div>
+            <div>
+              <label class="text-[10px] text-slate-600 font-semibold">Foto STNK</label>
+              <input type="file" id="veh-form-photo-stnk" accept="image/*" class="w-full mt-0.5 text-[11px] text-slate-500 file:mr-1 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-[10px] file:font-semibold file:bg-blue-50 file:text-[#0B4F9C]">
+            </div>
+            <div>
+              <label class="text-[10px] text-slate-600 font-semibold">Foto BPKB</label>
+              <input type="file" id="veh-form-photo-bpkb" accept="image/*" class="w-full mt-0.5 text-[11px] text-slate-500 file:mr-1 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-[10px] file:font-semibold file:bg-blue-50 file:text-[#0B4F9C]">
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center space-x-2 pt-2">
+          <button type="button" onclick="App.closeModal('modal-add-vehicle')"
+            class="flex-1 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600">
+            Batal
+          </button>
+          <button type="submit"
+            class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-[#0A3981] to-[#0B4F9C] text-white text-xs font-bold shadow-md">
+            Simpan Kendaraan
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 8: Photo Viewer Lightbox & Export/Download -->
+  <div id="modal-photo-lightbox" class="modal-backdrop fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 hidden">
+    <div class="w-full max-w-md bg-white rounded-3xl p-4 sm:p-5 shadow-2xl animate-fade-in space-y-3.5">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+        <div>
+          <h3 id="lightbox-title" class="text-sm font-bold text-slate-900 truncate">Foto Dokumen / Part</h3>
+          <p id="lightbox-subtitle" class="text-[11px] text-slate-400">Pratinjau Resolusi Penuh</p>
+        </div>
+        <button onclick="App.closeModal('modal-photo-lightbox')" class="p-1.5 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Main Image Container -->
+      <div class="w-full max-h-[60vh] rounded-2xl overflow-hidden bg-slate-950 flex items-center justify-center relative">
+        <img id="lightbox-img" src="" alt="Foto" class="max-w-full max-h-[60vh] object-contain">
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex items-center justify-between pt-1 gap-2">
+        <button type="button" id="lightbox-delete-btn" onclick="App.deleteActivePhoto()"
+          class="px-3.5 py-2.5 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-semibold flex items-center gap-1.5">
+          <i data-lucide="trash-2" class="w-4 h-4"></i>
+          <span>Hapus</span>
+        </button>
+
+        <div class="flex items-center space-x-2">
+          <button type="button" onclick="App.closeModal('modal-photo-lightbox')"
+            class="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-xs font-semibold">
+            Tutup
+          </button>
+          <button type="button" onclick="App.downloadActivePhoto()"
+            class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#0A3981] to-[#0B4F9C] text-white text-xs font-bold shadow-md flex items-center gap-1.5 active:scale-98">
+            <i data-lucide="download" class="w-4 h-4"></i>
+            <span>Unduh (JPG)</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 9: Interactive Google Maps Viewer for Maintenance Workshop -->
+  <div id="modal-google-maps" class="modal-backdrop fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-3 sm:p-5 hidden">
+    <div class="w-full max-w-md bg-white rounded-3xl p-5 shadow-2xl animate-fade-in space-y-4">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <div class="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center flex-shrink-0">
+            <i data-lucide="map-pin" class="w-4 h-4"></i>
+          </div>
+          <div class="min-w-0">
+            <h3 id="maps-modal-workshop-name" class="text-sm font-bold text-slate-900 truncate">Lokasi Bengkel</h3>
+            <p id="maps-modal-item-name" class="text-[11px] text-emerald-700 font-medium truncate">Riwayat Perawatan / Part</p>
+          </div>
+        </div>
+        <button onclick="App.closeModal('modal-google-maps')" class="p-1.5 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex-shrink-0">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Interactive Embedded Google Maps -->
+      <div class="relative w-full h-64 rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 shadow-inner">
+        <iframe id="maps-modal-iframe" class="w-full h-full border-0" src="" allowfullscreen="" loading="lazy"></iframe>
+      </div>
+
+      <!-- Workshop Info Card -->
+      <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 space-y-2">
+        <div class="flex items-start gap-2">
+          <i data-lucide="map" class="w-4 h-4 text-emerald-700 flex-shrink-0 mt-0.5"></i>
+          <p id="maps-modal-address" class="text-xs text-slate-700 font-medium leading-relaxed">
+            Jl. Rungkut Madya No. 45, Surabaya
+          </p>
+        </div>
+        <div class="flex items-center justify-between text-[11px] text-slate-500 pt-1.5 border-t border-slate-200/60">
+          <span id="maps-modal-date-km">Tanggal: 25 Sep 2026 • 12.000 KM</span>
+          <span id="maps-modal-cost" class="font-bold text-slate-800">Rp 70.000</span>
+        </div>
+      </div>
+
+      <!-- Action Navigation Buttons -->
+      <div class="flex items-center space-x-2 pt-1">
+        <button type="button" onclick="App.copyWorkshopAddress()"
+          class="flex-1 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center justify-center gap-1.5 active:scale-98 transition-colors">
+          <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+          <span>Salin Alamat</span>
+        </button>
+        <a id="maps-modal-direct-link" href="#" target="_blank" rel="noopener noreferrer"
+          class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-[#0A3981] to-[#0B4F9C] text-white text-xs font-bold shadow-md flex items-center justify-center gap-1.5 active:scale-98 transition-all hover:shadow-lg">
+          <i data-lucide="navigation" class="w-3.5 h-3.5"></i>
+          <span>Buka di Google Maps</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 10: PWA Installation Guide (Android & iOS Safari) -->
+  <div id="modal-pwa-install" class="modal-backdrop fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-3 sm:p-5 hidden">
+    <div class="w-full max-w-md bg-white rounded-3xl p-5 shadow-2xl animate-fade-in space-y-4">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center flex-shrink-0">
+            <i data-lucide="smartphone" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-slate-900">Pasang di Layar Utama HP</h3>
+            <p class="text-[11px] text-slate-400">Akses Cepat 1-Ketukan Tanpa Browser</p>
+          </div>
+        </div>
+        <button onclick="App.closeModal('modal-pwa-install')" class="p-1.5 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Instructions for Android / Chrome -->
+      <div id="pwa-guide-android" class="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-200/80 space-y-2">
+        <div class="flex items-center gap-2">
+          <span class="w-5 h-5 rounded-full bg-emerald-700 text-white text-[10px] font-bold flex items-center justify-center flex-shrink-0">1</span>
+          <h4 class="text-xs font-bold text-emerald-950">Android & Google Chrome</h4>
+        </div>
+        <p class="text-xs text-slate-600 pl-7 leading-relaxed">
+          Klik tombol <strong>"Pasang Sekarang"</strong> di bawah ini, lalu konfirmasi saat browser menampilkan dialog instalasi.
+        </p>
+        <div class="pl-7 pt-1">
+          <button type="button" onclick="App.triggerPWAInstallDirect()"
+            class="px-4 py-2 rounded-xl bg-gradient-to-r from-[#0A3981] to-[#0B4F9C] text-white text-xs font-bold shadow-sm active:scale-95 flex items-center gap-1.5 transition-all">
+            <i data-lucide="download" class="w-3.5 h-3.5"></i>
+            <span>Pasang Sekarang di Android</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Instructions for iPhone / iOS Safari -->
+      <div id="pwa-guide-ios" class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2.5">
+        <div class="flex items-center gap-2">
+          <span class="w-5 h-5 rounded-full bg-slate-700 text-white text-[10px] font-bold flex items-center justify-center flex-shrink-0">2</span>
+          <h4 class="text-xs font-bold text-slate-900">iPhone / iPad (Safari)</h4>
+        </div>
+        <ol class="text-xs text-slate-600 space-y-2 pl-7 list-decimal leading-relaxed">
+          <li>Buka KendaraTrack di browser <strong>Safari</strong>.</li>
+          <li>Ketuk tombol <strong>Bagikan / Share</strong> (ikon <span class="font-bold text-slate-900">⎋ kotak dengan panah ke atas</span>) di bilah bawah Safari.</li>
+          <li>Gulir ke bawah dan pilih menu <strong class="text-emerald-800">"Tambah ke Layar Utama" (Add to Home Screen ➕)</strong>.</li>
+          <li>Ketuk <strong>"Tambah"</strong> di pojok kanan atas. Ikon KendaraTrack akan langsung muncul di layar utama iPhone Anda seperti aplikasi App Store!</li>
+        </ol>
+      </div>
+
+      <div class="pt-1">
+        <button type="button" onclick="App.closeModal('modal-pwa-install')"
+          class="w-full py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors">
+          Tutup Panduan
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 11: Hub Analisis & Riwayat Konsumsi BBM -->
+  <div id="modal-fuel-hub" class="modal-backdrop fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 hidden">
+    <div class="w-full max-w-lg bg-white rounded-t-3xl sm:rounded-3xl p-5 shadow-2xl animate-fade-in max-h-[92vh] overflow-y-auto space-y-4">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+        <div class="flex items-center gap-2.5">
+          <div class="w-10 h-10 rounded-2xl bg-blue-50 text-[#0B4F9C] flex items-center justify-center shadow-2xs">
+            <i data-lucide="fuel" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-extrabold text-slate-900">Hub Konsumsi & Efisiensi BBM</h3>
+            <p id="fuel-hub-vehicle-name" class="text-xs text-slate-400">Honda Vario 160 CBS • L 4521 AB</p>
+          </div>
+        </div>
+        <button onclick="App.closeModal('modal-fuel-hub')" class="p-1.5 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Overview Cards (4 Grid) -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+        <div class="p-3 bg-gradient-to-br from-blue-50 to-indigo-50/50 rounded-2xl border border-blue-100 text-center">
+          <p class="text-[10px] uppercase font-bold text-blue-600">Efisiensi Rata-rata</p>
+          <p id="fuel-hub-avg-efficiency" class="text-lg font-black text-slate-900 mt-0.5">44.4 KM/L</p>
+          <span id="fuel-hub-rating-badge" class="inline-block text-[10px] px-2 py-0.5 mt-1 rounded-full font-bold bg-emerald-100 text-emerald-800">Sangat Irit</span>
+        </div>
+        <div class="p-3 bg-slate-50 rounded-2xl border border-slate-100 text-center">
+          <p class="text-[10px] uppercase font-bold text-slate-400">Biaya / KM</p>
+          <p id="fuel-hub-cost-per-km" class="text-lg font-black text-slate-900 mt-0.5">Rp 281</p>
+          <span class="text-[10px] text-slate-400">Rupiah per KM</span>
+        </div>
+        <div class="p-3 bg-slate-50 rounded-2xl border border-slate-100 text-center">
+          <p class="text-[10px] uppercase font-bold text-slate-400">BBM Bulan Ini</p>
+          <p id="fuel-hub-monthly-liters" class="text-lg font-black text-slate-900 mt-0.5">7.04 L</p>
+          <span id="fuel-hub-monthly-cost" class="text-[10px] text-slate-500 font-semibold">Rp 88.000</span>
+        </div>
+        <div class="p-3 bg-slate-50 rounded-2xl border border-slate-100 text-center">
+          <p class="text-[10px] uppercase font-bold text-slate-400">Total Terisi</p>
+          <p id="fuel-hub-total-liters" class="text-lg font-black text-slate-900 mt-0.5">7.04 L</p>
+          <span id="fuel-hub-total-cost" class="text-[10px] text-slate-500 font-semibold">Rp 88.000</span>
+        </div>
+      </div>
+
+      <!-- Collapsible / Interactive Full-to-Full Calculator -->
+      <div class="bg-gradient-to-br from-slate-50 to-blue-50/30 rounded-2xl border border-blue-100/60 p-4 space-y-3">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <div class="w-7 h-7 rounded-lg bg-[#0B4F9C] text-white flex items-center justify-center text-xs shadow-2xs">
+              <i data-lucide="calculator" class="w-4 h-4"></i>
+            </div>
+            <div>
+              <h4 class="text-xs font-bold text-slate-900">Kalkulator Full-to-Full Instan</h4>
+              <p class="text-[10px] text-slate-500">Hitung efisiensi perjalananmu sekarang</p>
+            </div>
+          </div>
+          <button type="button" onclick="App.toggleFuelCalculator()" class="text-xs font-bold text-[#0B4F9C] hover:underline">
+            <span id="calc-toggle-text">Tutup</span>
+          </button>
+        </div>
+
+        <div id="fuel-calc-body" class="space-y-3">
+          <div class="grid grid-cols-3 gap-2">
+            <div>
+              <label class="text-[10px] font-semibold text-slate-600">Odo Awal (KM)</label>
+              <input type="number" id="calc-odo-start" placeholder="14090"
+                class="w-full mt-0.5 p-2 text-xs rounded-xl bg-white border border-slate-200">
+            </div>
+            <div>
+              <label class="text-[10px] font-semibold text-slate-600">Odo Baru (KM)</label>
+              <input type="number" id="calc-odo-end" placeholder="14250"
+                class="w-full mt-0.5 p-2 text-xs rounded-xl bg-white border border-slate-200">
+            </div>
+            <div>
+              <label class="text-[10px] font-semibold text-slate-600">Liter (L)</label>
+              <input type="number" id="calc-liters" step="0.01" placeholder="3.6"
+                class="w-full mt-0.5 p-2 text-xs rounded-xl bg-white border border-slate-200">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="text-[10px] font-semibold text-slate-600">Total Biaya (Opsional)</label>
+              <input type="number" id="calc-cost" placeholder="45000"
+                class="w-full mt-0.5 p-2 text-xs rounded-xl bg-white border border-slate-200">
+            </div>
+            <div class="flex items-end">
+              <button type="button" onclick="App.calculateFuelEfficiencyManual()"
+                class="w-full py-2 rounded-xl bg-[#0B4F9C] text-white text-xs font-bold hover:bg-[#0A3981] transition-colors shadow-2xs">
+                Hitung Sekarang
+              </button>
+            </div>
+          </div>
+
+          <div id="calc-result-box" class="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-center hidden">
+            <p class="text-xs font-semibold text-emerald-800">
+              Hasil: <span id="calc-result-kml" class="font-extrabold text-sm">44.4 KM/L</span>
+              <span id="calc-result-extra" class="text-[11px] text-emerald-700 font-medium ml-1"></span>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Refueling History List -->
+      <div class="space-y-2">
+        <div class="flex items-center justify-between px-0.5">
+          <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400">Riwayat Pengisian Terakhir</h4>
+          <span id="fuel-log-count" class="text-[11px] font-bold text-slate-500">2 Catatan</span>
+        </div>
+        <div id="fuel-history-list" class="space-y-2 max-h-60 overflow-y-auto pr-1">
+          <!-- Populated by App.js -->
+        </div>
+      </div>
+
+      <!-- Action Footer -->
+      <div class="flex items-center space-x-2 pt-2 border-t border-slate-100">
+        <button type="button" onclick="App.closeModal('modal-fuel-hub')"
+          class="flex-1 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50">
+          Tutup
+        </button>
+        <button type="button" onclick="App.closeModal('modal-fuel-hub'); App.openQuickFuelModal();"
+          class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-[#0A3981] to-[#0B4F9C] text-white text-xs font-bold shadow-md flex items-center justify-center gap-1.5 active:scale-98">
+          <i data-lucide="plus" class="w-4 h-4"></i>
+          <span>Catat Isi Bensin</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 12: Quick Catat Pengisian Bensin -->
+  <div id="modal-quick-fuel" class="modal-backdrop fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 hidden">
+    <div class="w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl p-5 shadow-2xl animate-fade-in space-y-4 max-h-[92vh] overflow-y-auto">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+        <div class="flex items-center gap-2.5">
+          <div class="w-10 h-10 rounded-2xl bg-blue-50 text-[#0B4F9C] flex items-center justify-center shadow-2xs">
+            <i data-lucide="fuel" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-slate-900">Catat Pengisian Bensin (BBM)</h3>
+            <p class="text-[11px] text-slate-400">Pencatatan cepat saat di SPBU</p>
+          </div>
+        </div>
+        <button onclick="App.closeModal('modal-quick-fuel')" class="text-slate-400 hover:text-slate-700">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form id="quick-fuel-form" onsubmit="App.submitQuickFuelForm(event)" class="space-y-3">
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-xs font-semibold text-slate-700">Tanggal Pengisian</label>
+            <input type="date" id="qfuel-date" required
+              class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200">
+          </div>
+          <div>
+            <label class="text-xs font-semibold text-slate-700">Odometer Terkini (KM)</label>
+            <input type="number" id="qfuel-odometer" required placeholder="14250"
+              class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200 font-bold">
+            <span id="qfuel-last-odo-hint" class="text-[10px] text-slate-400 block mt-0.5 truncate">Terakhir: 14.250 KM</span>
+          </div>
+        </div>
+
+        <div>
+          <label class="text-xs font-semibold text-slate-700">Jenis Bahan Bakar</label>
+          <select id="qfuel-fuel-type" onchange="App.handleFuelTypeChange()"
+            class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200 font-semibold">
+            <option value="Pertamax" data-price="12500">Pertamax (RON 92) - Rp 12.500/L</option>
+            <option value="Pertalite" data-price="10000">Pertalite (RON 90) - Rp 10.000/L</option>
+            <option value="Pertamax Turbo" data-price="14400">Pertamax Turbo (RON 98) - Rp 14.400/L</option>
+            <option value="Dexlite" data-price="14500">Dexlite (Diesel) - Rp 14.500/L</option>
+            <option value="Pertamina Dex" data-price="15100">Pertamina Dex - Rp 15.100/L</option>
+            <option value="Shell Super" data-price="12700">Shell Super (RON 92) - Rp 12.700/L</option>
+            <option value="Shell V-Power" data-price="14500">Shell V-Power (RON 95) - Rp 14.500/L</option>
+            <option value="BP 92" data-price="12500">BP 92 - Rp 12.500/L</option>
+            <option value="Lainnya" data-price="0">Lainnya / Manual</option>
+          </select>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-xs font-semibold text-slate-700">Total Bayar (Rp)</label>
+            <input type="number" id="qfuel-amount" placeholder="45000" required min="1000"
+              oninput="App.syncFuelAmountToLiters()"
+              class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200 font-black text-slate-900">
+          </div>
+          <div>
+            <label class="text-xs font-semibold text-slate-700">Jumlah Liter (L)</label>
+            <input type="number" id="qfuel-liters" placeholder="3.6" step="0.01" required min="0.1"
+              oninput="App.syncFuelLitersToAmount()"
+              class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200 font-bold text-blue-700">
+          </div>
+        </div>
+
+        <div>
+          <label class="text-xs font-semibold text-slate-700">Nama SPBU / Lokasi</label>
+          <input type="text" id="qfuel-station" placeholder="Contoh: SPBU Pertamina Merr Rungkut / Shell Sutorejo"
+            class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200">
+        </div>
+
+        <div class="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200/80">
+          <div>
+            <p class="text-xs font-bold text-slate-800">Isi Tangki Penuh (Full Tank)</p>
+            <p class="text-[10px] text-slate-500">Diperlukan untuk akurasi hitung KM/L yang tepat</p>
+          </div>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" id="qfuel-full-tank" checked class="sr-only peer">
+            <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#0B4F9C]"></div>
+          </label>
+        </div>
+
+        <!-- Optional Photo Receipt -->
+        <div>
+          <label class="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+            <i data-lucide="camera" class="w-3.5 h-3.5 text-blue-600"></i> Foto Struk SPBU (Opsional)
+          </label>
+          <input type="file" id="qfuel-photo" accept="image/*"
+            class="w-full mt-1 text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-[#0B4F9C] hover:file:bg-blue-100">
+        </div>
+
+        <div>
+          <label class="text-xs font-semibold text-slate-700">Catatan Tambahan</label>
+          <input type="text" id="qfuel-notes" placeholder="Contoh: Bensin luar kota / mudik"
+            class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200">
+        </div>
+
+        <div class="flex items-center space-x-2 pt-2">
+          <button type="button" onclick="App.closeModal('modal-quick-fuel')"
+            class="flex-1 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50">
+            Batal
+          </button>
+          <button type="submit"
+            class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-[#0A3981] to-[#0B4F9C] text-white text-xs font-bold shadow-md active:scale-98">
+            Simpan Pengisian BBM
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 13: Fleet Trip & Visit Tracking (GPS) -->
+  <div id="modal-fleet-tracking" class="modal-backdrop fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 hidden">
+    <div class="w-full max-w-lg bg-white rounded-t-3xl sm:rounded-3xl p-5 shadow-2xl animate-fade-in max-h-[92vh] overflow-y-auto space-y-4">
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+        <div class="flex items-center gap-2.5">
+          <div class="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center shadow-2xs">
+            <i data-lucide="navigation" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-extrabold text-slate-900">Fleet Tracking & GPS Kunjungan</h3>
+            <p id="fleet-vehicle-name" class="text-xs text-slate-400">Honda Vario 160 CBS • L 1234 AB</p>
+          </div>
+        </div>
+        <button onclick="App.closeModal('modal-fleet-tracking')" class="p-1.5 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Fleet Nav Tabs -->
+      <div class="grid grid-cols-3 gap-1 p-1 bg-slate-100 rounded-2xl text-xs font-bold text-center">
+        <button type="button" id="fleet-tab-btn-live" onclick="App.switchFleetTab('live')"
+          class="py-2 rounded-xl bg-white text-slate-900 shadow-2xs transition-all">
+          🔴 Live GPS
+        </button>
+        <button type="button" id="fleet-tab-btn-history" onclick="App.switchFleetTab('history')"
+          class="py-2 rounded-xl text-slate-500 hover:text-slate-800 transition-all">
+          📋 Riwayat Trip
+        </button>
+        <button type="button" id="fleet-tab-btn-map" onclick="App.switchFleetTab('map')"
+          class="py-2 rounded-xl text-slate-500 hover:text-slate-800 transition-all">
+          🗺️ Peta Rute
+        </button>
+      </div>
+
+      <!-- TAB 1: LIVE GPS TRACKING -->
+      <div id="fleet-tab-content-live" class="space-y-3.5">
+        <!-- GPS Status & Mandatory Permission Box -->
+        <div id="fleet-gps-permission-box" class="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 space-y-2">
+          <div class="flex items-start gap-2.5">
+            <div class="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center flex-shrink-0">
+              <i data-lucide="shield-alert" class="w-4 h-4"></i>
+            </div>
+            <div>
+              <h4 class="text-xs font-bold text-slate-900">Pengguna Wajib Mengaktifkan GPS</h4>
+              <p class="text-[11px] text-slate-600 leading-relaxed">
+                Untuk mencatat riwayat perjalanan dan kunjungan secara otomatis, izinkan akses lokasi (High Accuracy) pada perangkat Anda.
+              </p>
+            </div>
+          </div>
+          <button type="button" onclick="App.requestGPSPermission()"
+            class="w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 text-white text-xs font-bold shadow-sm flex items-center justify-center gap-1.5 active:scale-98">
+            <i data-lucide="crosshair" class="w-3.5 h-3.5"></i>
+            <span>Izinkan & Kunci Sinyal GPS</span>
+          </button>
+        </div>
+
+        <div id="fleet-gps-ready-box" class="hidden p-3 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <div class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></div>
+            <div>
+              <p class="text-xs font-bold text-emerald-900">GPS Terkunci & Siap</p>
+              <p id="fleet-gps-coords-text" class="text-[10px] text-emerald-700 font-mono">-7.265500, 112.748300 (±4m)</p>
+            </div>
+          </div>
+          <span class="px-2 py-0.5 text-[10px] rounded-full font-bold bg-emerald-100 text-emerald-800">
+            Akurat
+          </span>
+        </div>
+
+        <!-- Live HUD Display (Dark Speedometer Screen) -->
+        <div class="p-4 rounded-3xl bg-slate-900 text-white shadow-xl space-y-3.5 border border-slate-800">
+          <div class="flex items-center justify-between text-xs">
+            <span class="flex items-center gap-1.5 text-slate-300 font-bold">
+              <span id="fleet-live-pulse-dot" class="w-2.5 h-2.5 rounded-full bg-slate-500"></span>
+              <span id="fleet-live-status-text">STATUS: STANDBY</span>
+            </span>
+            <span id="fleet-live-timer" class="font-mono text-sm font-black text-emerald-400 bg-slate-800 px-3 py-1 rounded-xl border border-slate-700">00:00:00</span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2.5 text-center">
+            <div class="p-3 rounded-2xl bg-slate-800/80 border border-slate-700/80">
+              <p class="text-[10px] uppercase font-bold text-slate-400">Kecepatan</p>
+              <p id="fleet-live-speed" class="text-3xl font-black text-emerald-400 mt-0.5">0 <span class="text-xs font-normal text-slate-400">km/h</span></p>
+            </div>
+            <div class="p-3 rounded-2xl bg-slate-800/80 border border-slate-700/80">
+              <p class="text-[10px] uppercase font-bold text-slate-400">Jarak Tempuh</p>
+              <p id="fleet-live-distance" class="text-3xl font-black text-white mt-0.5">0.00 <span class="text-xs font-normal text-slate-400">KM</span></p>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between text-[11px] text-slate-400 pt-1 border-t border-slate-800">
+            <span>Kunjungan: <strong id="fleet-live-visits-count" class="text-emerald-400 font-bold">0 Lokasi</strong></span>
+            <span id="fleet-live-max-speed">Maks: 0 km/h</span>
+          </div>
+        </div>
+
+        <!-- Trip Setup Controls (Before starting trip) -->
+        <div id="fleet-setup-controls" class="space-y-3">
+          <div>
+            <label class="text-xs font-semibold text-slate-700">Tujuan / Judul Perjalanan</label>
+            <input type="text" id="fleet-input-title" placeholder="Misal: Pengantaran Order & Sales Visit"
+              class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200 font-semibold">
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="text-xs font-semibold text-slate-700">Kategori Perjalanan</label>
+              <select id="fleet-input-purpose" class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200 font-semibold">
+                <option value="dinas">Dinas / Operasional</option>
+                <option value="sales">Sales & Kunjungan Toko</option>
+                <option value="logistik">Pengantaran Barang</option>
+                <option value="pribadi">Pribadi</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs font-semibold text-slate-700">Driver / PIC</label>
+              <input type="text" id="fleet-input-driver" placeholder="Nama Driver"
+                class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200">
+            </div>
+          </div>
+
+          <button type="button" id="fleet-btn-start" onclick="App.startTripTracking()"
+            class="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-700 text-white text-sm font-extrabold shadow-md flex items-center justify-center gap-2 active:scale-98 transition-all">
+            <i data-lucide="play" class="w-4 h-4 fill-white"></i>
+            <span>Mulai Perjalanan (Wajib GPS)</span>
+          </button>
+        </div>
+
+        <!-- Active Trip Action Buttons (While trip is running) -->
+        <div id="fleet-active-controls" class="hidden space-y-2.5">
+          <button type="button" onclick="App.openAddVisitModal()"
+            class="w-full py-3 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-extrabold shadow-sm flex items-center justify-center gap-2 active:scale-98 transition-all">
+            <i data-lucide="map-pin" class="w-4 h-4"></i>
+            <span>+ Catat Kunjungan / Singgah di Sini</span>
+          </button>
+
+          <button type="button" onclick="App.stopTripTracking()"
+            class="w-full py-3.5 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-extrabold shadow-md flex items-center justify-center gap-2 active:scale-98 transition-all">
+            <i data-lucide="square" class="w-4 h-4 fill-white"></i>
+            <span>Selesai & Simpan Riwayat Perjalanan</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- TAB 2: TRIP HISTORY LIST -->
+      <div id="fleet-tab-content-history" class="hidden space-y-3">
+        <!-- Overview summary banner -->
+        <div class="grid grid-cols-3 gap-2 p-3 bg-slate-50 rounded-2xl border border-slate-100 text-center">
+          <div>
+            <p class="text-[10px] text-slate-400 uppercase font-bold">Total Trip</p>
+            <p id="fleet-stat-total-trips" class="text-sm font-black text-slate-900 mt-0.5">3 Trip</p>
+          </div>
+          <div class="border-x border-slate-200">
+            <p class="text-[10px] text-slate-400 uppercase font-bold">Total Jarak</p>
+            <p id="fleet-stat-total-km" class="text-sm font-black text-emerald-700 mt-0.5">124.1 KM</p>
+          </div>
+          <div>
+            <p class="text-[10px] text-slate-400 uppercase font-bold">Kunjungan</p>
+            <p id="fleet-stat-total-visits" class="text-sm font-black text-slate-900 mt-0.5">5 Klien</p>
+          </div>
+        </div>
+
+        <div id="fleet-trips-list" class="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+          <!-- Populated by App.js -->
+        </div>
+      </div>
+
+      <!-- TAB 3: ROUTE MAP & VISITS VIEWER -->
+      <div id="fleet-tab-content-map" class="hidden space-y-3">
+        <div class="flex items-center justify-between">
+          <div>
+            <h4 id="fleet-map-trip-title" class="text-xs font-bold text-slate-900">Rute Perjalanan Terpilih</h4>
+            <p id="fleet-map-trip-subtitle" class="text-[10px] text-slate-400">Garis biru menunjukkan jalur GPS yang dilalui</p>
+          </div>
+          <button type="button" id="fleet-map-google-btn" onclick="App.openActiveTripInGoogleMaps()"
+            class="text-[10px] font-bold text-[#0B4F9C] hover:underline flex items-center gap-1">
+            <i data-lucide="external-link" class="w-3 h-3"></i> Google Maps
+          </button>
+        </div>
+
+        <!-- Interactive Map Container (Leaflet / OSM) -->
+        <div id="fleet-map-container" class="w-full h-64 rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 relative shadow-inner">
+          <div id="fleet-leaflet-map" class="w-full h-full"></div>
+        </div>
+
+        <!-- Visits in this Trip List -->
+        <div class="space-y-1.5">
+          <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Titik Kunjungan & Singgah</p>
+          <div id="fleet-map-visits-list" class="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+            <!-- Populated by App.js -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="flex items-center space-x-2 pt-2 border-t border-slate-100">
+        <button type="button" onclick="App.closeModal('modal-fleet-tracking')"
+          class="w-full py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50">
+          Tutup
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 14: Catat Kunjungan / Singgah Baru -->
+  <div id="modal-add-visit" class="modal-backdrop fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 hidden">
+    <div class="w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl p-5 shadow-2xl animate-fade-in space-y-4">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
+            <i data-lucide="map-pin" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-slate-900">Catat Kunjungan / Singgah</h3>
+            <p class="text-[10px] text-slate-400">Lokasi GPS terkunci otomatis</p>
+          </div>
+        </div>
+        <button onclick="App.closeModal('modal-add-visit')" class="text-slate-400 hover:text-slate-700">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form id="fleet-visit-form" onsubmit="App.submitAddVisit(event)" class="space-y-3">
+        <div>
+          <label class="text-xs font-semibold text-slate-700">Nama Toko / Klien / Lokasi</label>
+          <input type="text" id="visit-input-name" placeholder="Misal: Toko Surya Motor / PT Samudra" required
+            class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200 font-bold">
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-xs font-semibold text-slate-700">Jenis Kunjungan</label>
+            <select id="visit-input-category" class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200 font-semibold">
+              <option value="kunjungan_toko">Kunjungan Toko / Mitra</option>
+              <option value="meeting_klien">Pertemuan / Meeting Klien</option>
+              <option value="pengiriman">Pengiriman Barang</option>
+              <option value="spbu">Pengisian BBM / SPBU</option>
+              <option value="istirahat">Istirahat / Makan</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-xs font-semibold text-slate-700">Waktu Singgah</label>
+            <input type="time" id="visit-input-time"
+              class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200">
+          </div>
+        </div>
+
+        <div>
+          <label class="text-xs font-semibold text-slate-700">Alamat / Patokan (Opsional)</label>
+          <input type="text" id="visit-input-address" placeholder="Contoh: Jl. Rungkut Madya No. 45"
+            class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200">
+        </div>
+
+        <div>
+          <label class="text-xs font-semibold text-slate-700">Catatan Kegiatan / Hasil</label>
+          <input type="text" id="visit-input-notes" placeholder="Misal: Serah terima barang & katalog baru"
+            class="w-full mt-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200">
+        </div>
+
+        <div class="flex items-center space-x-2 pt-2">
+          <button type="button" onclick="App.closeModal('modal-add-visit')"
+            class="flex-1 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50">
+            Batal
+          </button>
+          <button type="submit"
+            class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-white text-xs font-bold shadow-md active:scale-98">
+            Simpan Kunjungan
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Global Toast Notification Container -->
+  <div id="toast-container" class="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 flex flex-col space-y-2 pointer-events-none w-11/12 max-w-sm"></div>
+
+  <!-- APPLICATION SCRIPTS -->
+  <script src="js/config.js"></script>
+  <script src="js/seedData.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="services/api.js"></script>
+  <script src="js/calendar.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

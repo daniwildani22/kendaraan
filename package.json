@@ -5,7 +5,10 @@
   "private": true,
   "scripts": {
     "start": "npx serve .",
-    "dev": "npx serve ."
+    "dev": "npx serve .",
+    "build": "node scripts/build.js",
+    "cap:sync": "npm run build && npx cap sync android",
+    "cap:open": "npx cap open android"
   },
   "keywords": [
     "vehicle-tracker",
@@ -17,5 +20,10 @@
     "vercel"
   ],
   "author": "KendaraTrack",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "@capacitor/android": "^8.6.2",
+    "@capacitor/cli": "^7.6.10",
+    "@capacitor/core": "^8.6.2"
+  }
 }

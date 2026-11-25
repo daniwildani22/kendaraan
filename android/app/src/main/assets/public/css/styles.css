@@ -1,0 +1,159 @@
+/* =========================================================================
+   KENDARATRACK - ROYAL BLUE & ORANGE UI DESIGN SYSTEM STYLES
+   Inspired by Modern Professional Service Apps (AdBrovez Reference)
+   ========================================================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --color-brand-primary: #0B4F9C;
+  --color-brand-dark: #0A3981;
+  --color-brand-light: #1565C0;
+  --color-brand-accent: #F97316;
+  --color-brand-amber: #F59E0B;
+  --color-bg-soft: #F8FAFC;
+  --color-surface: #FFFFFF;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-bg-soft);
+  color: #0F172A;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+/* Royal Blue Gradient Utilities */
+.bg-brand-royal {
+  background: linear-gradient(135deg, #0A3981 0%, #0B4F9C 50%, #1565C0 100%);
+}
+
+.bg-brand-royal-subtle {
+  background: linear-gradient(135deg, rgba(11, 79, 156, 0.08) 0%, rgba(21, 101, 192, 0.04) 100%);
+}
+
+/* Backward compatibility for existing utility classes */
+.bg-finora-emerald {
+  background: linear-gradient(135deg, #0A3981 0%, #0B4F9C 50%, #1565C0 100%);
+}
+
+.bg-finora-emerald-subtle {
+  background: linear-gradient(135deg, rgba(11, 79, 156, 0.08) 0%, rgba(21, 101, 192, 0.04) 100%);
+}
+
+/* Modern Card Elevations */
+.brand-card, .finora-card {
+  background: #FFFFFF;
+  border: 1px solid #F1F5F9;
+  border-radius: 1.25rem; /* 20px */
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.03), 0 1px 2px -1px rgba(0, 0, 0, 0.02);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.brand-card:hover, .finora-card:hover {
+  box-shadow: 0 4px 14px 0 rgba(11, 79, 156, 0.08);
+}
+
+/* Glassmorphism & Translucent Bars */
+.glass-nav {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-top: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+/* Primary Action Buttons */
+.brand-btn-primary, .finora-btn-primary {
+  background: #0B4F9C;
+  color: #FFFFFF;
+  font-weight: 700;
+  border-radius: 1rem; /* 16px */
+  transition: all 0.15s ease-in-out;
+  box-shadow: 0 4px 14px 0 rgba(11, 79, 156, 0.25);
+}
+
+.brand-btn-primary:hover, .finora-btn-primary:hover {
+  background: #093E7A;
+}
+
+.brand-btn-primary:active, .finora-btn-primary:active {
+  transform: scale(0.98);
+  opacity: 0.95;
+}
+
+/* Mobile Frame Container for Desktop Preview */
+.mobile-viewport-container {
+  max-width: 440px;
+  min-height: 100vh;
+  margin: 0 auto;
+  position: relative;
+  background-color: #F8FAFC;
+  box-shadow: 0 20px 40px -15px rgba(15, 23, 42, 0.07);
+  display: flex;
+  flex-direction: column;
+}
+
+@media (min-width: 768px) {
+  body {
+    background: #EBF1F6;
+    padding-top: 1.5rem;
+    padding-bottom: 2rem;
+  }
+  .mobile-viewport-container {
+    border-radius: 2.5rem; /* 40px */
+    border: 9px solid #1E293B;
+    box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1);
+    overflow: hidden;
+    height: 890px;
+    max-height: calc(100vh - 3rem);
+  }
+  .glass-nav {
+    position: absolute !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    border-bottom-left-radius: 2rem;
+    border-bottom-right-radius: 2rem;
+  }
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.25s ease-out forwards;
+}

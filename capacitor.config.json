@@ -1,0 +1,8 @@
+{
+  "appId": "com.kendaratrack.app",
+  "appName": "KendaraTrack",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  }
+}
