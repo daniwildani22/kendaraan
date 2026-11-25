@@ -400,7 +400,7 @@ const KendaraAPI = (function () {
 
     async saveTrip(trip) {
       const list = await this.getTrips();
-      trip.id = trip.id || "trip-" + Date.now();
+      trip.id = trip.id || generateUUID();
       const existingIdx = list.findIndex((t) => t.id === trip.id);
       if (existingIdx >= 0) {
         list[existingIdx] = { ...list[existingIdx], ...trip };
@@ -1019,6 +1019,111 @@ const KendaraAPI = (function () {
         console.warn("Supabase completeSchedule sync warning:", e);
       }
       return res;
+    },
+
+    async getTrips(vehicleId = null) {
+      const user = (typeof KendaraAuth !== "undefined") ? KendaraAuth.getUser() : null;
+      try {
+        let query = vehicleId
+          ? `trips?vehicle_id=eq.${vehicleId}&order=date.desc`
+          : "trips?order=date.desc";
+        if (user && user.id && user.provider === "supabase" && !vehicleId) {
+          query = `trips?user_id=eq.${user.id}&order=date.desc`;
+        }
+        const cloudTrips = await this.fetchSupabase(query);
+        if (Array.isArray(cloudTrips)) {
+          // If cloud has data, update local replica so offline works
+          if (cloudTrips.length > 0) {
+            localStorage.setItem(STORAGE_KEYS.TRIPS, JSON.stringify(cloudTrips));
+            return cloudTrips;
+          }
+          // If cloud has no trips, check if there are local trips on this device and auto-sync them to cloud!
+          const localTrips = await LocalAdapter.getTrips(vehicleId);
+          if (localTrips && localTrips.length > 0) {
+            for (const t of localTrips) {
+              if (t.vehicle_id === vehicleId || !vehicleId) {
+                try {
+                  await this.saveTrip(t);
+                } catch (syncErr) {
+                  console.warn("Auto-sync local trip to Supabase skipped:", syncErr);
+                }
+              }
+            }
+            const refreshed = await this.fetchSupabase(query);
+            if (Array.isArray(refreshed) && refreshed.length > 0) return refreshed;
+          }
+          return cloudTrips;
+        }
+        return await LocalAdapter.getTrips(vehicleId);
+      } catch (e) {
+        console.warn("Supabase getTrips failed, fallback to local:", e);
+        return LocalAdapter.getTrips(vehicleId);
+      }
+    },
+
+    async saveTrip(trip) {
+      const user = (typeof KendaraAuth !== "undefined") ? KendaraAuth.getUser() : null;
+      const payload = { ...trip };
+      if (user && user.id && user.provider === "supabase" && !payload.user_id) {
+        payload.user_id = user.id;
+      }
+      if (!isValidUUID(payload.id)) {
+        payload.id = generateUUID();
+        trip.id = payload.id;
+      }
+      payload.date = payload.date ? payload.date : new Date().toISOString().split("T")[0];
+      payload.distance_km = Number(payload.distance_km) || 0;
+      payload.duration_minutes = parseInt(payload.duration_minutes, 10) || 0;
+      payload.avg_speed_kmh = Number(payload.avg_speed_kmh) || 0;
+      payload.max_speed_kmh = Number(payload.max_speed_kmh) || 0;
+      if (payload.start_lat !== undefined && payload.start_lat !== null && payload.start_lat !== "") {
+        payload.start_lat = Number(payload.start_lat);
+      } else {
+        payload.start_lat = null;
+      }
+      if (payload.start_lng !== undefined && payload.start_lng !== null && payload.start_lng !== "") {
+        payload.start_lng = Number(payload.start_lng);
+      } else {
+        payload.start_lng = null;
+      }
+      if (payload.end_lat !== undefined && payload.end_lat !== null && payload.end_lat !== "") {
+        payload.end_lat = Number(payload.end_lat);
+      } else {
+        payload.end_lat = null;
+      }
+      if (payload.end_lng !== undefined && payload.end_lng !== null && payload.end_lng !== "") {
+        payload.end_lng = Number(payload.end_lng);
+      } else {
+        payload.end_lng = null;
+      }
+
+      // JSONB fields: ensure visits and path are arrays
+      payload.visits = Array.isArray(payload.visits) ? payload.visits : [];
+      payload.path = Array.isArray(payload.path) ? payload.path : [];
+
+      try {
+        const res = await this.fetchSupabase("trips", {
+          method: "POST",
+          headers: { Prefer: "resolution=merge-duplicates,return=representation" },
+          body: JSON.stringify(payload)
+        });
+        const saved = (res && res[0]) ? res[0] : payload;
+        trip.id = saved.id;
+        await LocalAdapter.saveTrip(saved);
+        return saved;
+      } catch (e) {
+        console.warn("SupabaseAdapter.saveTrip warning:", e);
+        return LocalAdapter.saveTrip(trip);
+      }
+    },
+
+    async deleteTrip(id) {
+      try {
+        await this.fetchSupabase(`trips?id=eq.${id}`, { method: "DELETE" });
+      } catch (e) {
+        console.warn("Supabase deleteTrip failed:", e);
+      }
+      return LocalAdapter.deleteTrip(id);
     }
   };
 

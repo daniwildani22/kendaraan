@@ -119,6 +119,34 @@ CREATE TABLE IF NOT EXISTS public.schedules (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- 5. TABEL: trips (Riwayat Pelacakan GPS & Rute Armada)
+CREATE TABLE IF NOT EXISTS public.trips (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    vehicle_id UUID REFERENCES public.vehicles(id) ON DELETE CASCADE NOT NULL,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    title VARCHAR(150) NOT NULL,
+    purpose VARCHAR(100),
+    driver VARCHAR(100),
+    date DATE NOT NULL DEFAULT CURRENT_DATE,
+    start_time VARCHAR(20),
+    end_time VARCHAR(20),
+    duration_minutes INT DEFAULT 0,
+    distance_km NUMERIC(10, 2) DEFAULT 0,
+    avg_speed_kmh NUMERIC(6, 1) DEFAULT 0,
+    max_speed_kmh NUMERIC(6, 1) DEFAULT 0,
+    start_address TEXT,
+    end_address TEXT,
+    start_lat NUMERIC(10, 6),
+    start_lng NUMERIC(10, 6),
+    end_lat NUMERIC(10, 6),
+    end_lng NUMERIC(10, 6),
+    status VARCHAR(20) DEFAULT 'completed',
+    visits JSONB DEFAULT '[]'::jsonb,
+    path JSONB DEFAULT '[]'::jsonb,
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- INDEXES FOR MAXIMUM QUERY PERFORMANCE
 CREATE INDEX IF NOT EXISTS idx_vehicles_user ON public.vehicles(user_id);
 CREATE INDEX IF NOT EXISTS idx_transactions_vehicle_date ON public.transactions(vehicle_id, date DESC);
@@ -126,6 +154,7 @@ CREATE INDEX IF NOT EXISTS idx_transactions_category ON public.transactions(cate
 CREATE INDEX IF NOT EXISTS idx_maintenance_vehicle_date ON public.maintenance_logs(vehicle_id, date DESC);
 CREATE INDEX IF NOT EXISTS idx_schedules_vehicle_due ON public.schedules(vehicle_id, due_date ASC);
 CREATE INDEX IF NOT EXISTS idx_schedules_completed ON public.schedules(is_completed);
+CREATE INDEX IF NOT EXISTS idx_trips_vehicle_date ON public.trips(vehicle_id, date DESC);
 
 -- AUTO-UPDATE updated_at TRIGGER FUNCTION
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -153,6 +182,7 @@ ALTER TABLE public.vehicles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.maintenance_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.schedules ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.trips ENABLE ROW LEVEL SECURITY;
 
 -- GRANT PERMISSIONS TO ANON & AUTHENTICATED
 GRANT USAGE ON SCHEMA public TO anon, authenticated;
@@ -179,6 +209,11 @@ WITH CHECK (auth.uid() = user_id OR user_id IS NULL);
 
 DROP POLICY IF EXISTS "Multi-user access schedules" ON public.schedules;
 CREATE POLICY "Multi-user access schedules" ON public.schedules 
+FOR ALL USING (auth.uid() = user_id OR user_id IS NULL) 
+WITH CHECK (auth.uid() = user_id OR user_id IS NULL);
+
+DROP POLICY IF EXISTS "Multi-user access trips" ON public.trips;
+CREATE POLICY "Multi-user access trips" ON public.trips 
 FOR ALL USING (auth.uid() = user_id OR user_id IS NULL) 
 WITH CHECK (auth.uid() = user_id OR user_id IS NULL);
 
@@ -248,4 +283,22 @@ INSERT INTO public.schedules (
     'c1b2c3d4-0003-4000-8000-000000000203', 'a1b2c3d4-0001-4000-8000-000000000001',
     'Cicilan Bulanan FIF Vario 160', 'cicilan', '2026-12-05', NULL, 980000,
     'Angsuran ke-19 dari 35 bulan', true, 1, NULL, false
+) ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO public.trips (
+    id, vehicle_id, title, purpose, driver, date, start_time, end_time,
+    duration_minutes, distance_km, avg_speed_kmh, max_speed_kmh,
+    start_address, end_address, start_lat, start_lng, end_lat, end_lng,
+    status, visits, path, notes
+) VALUES (
+    'd1b2c3d4-0001-4000-8000-000000000301',
+    'a1b2c3d4-0001-4000-8000-000000000001',
+    'Pengiriman Dokumen & Kunjungan Klien', 'dinas', 'Driver Utama',
+    '2026-11-23', '08:30', '11:15', 165, 21.4, 31, 54,
+    'Kantor Pusat - Jl. Pemuda No. 10, Surabaya', 'Kantor Pusat - Jl. Pemuda No. 10, Surabaya',
+    -7.2655, 112.7483, -7.2655, 112.7483,
+    'completed',
+    '[{"id":"vis-101","place_name":"Toko Sparepart Surya Motor","category":"kunjungan_toko","time":"09:15","address":"Jl. Rungkut Madya No. 45, Surabaya","lat":-7.321,"lng":112.775,"notes":"Serah terima dokumen dan invoice","photo":""},{"id":"vis-102","place_name":"Klien PT Maju Bersama","category":"klien","time":"10:30","address":"Kawasan SIER Rungkut Industri, Surabaya","lat":-7.332,"lng":112.76,"notes":"Meeting progres kerja sama","photo":""}]'::jsonb,
+    '[[-7.2655,112.7483],[-7.28,112.755],[-7.301,112.768],[-7.321,112.775],[-7.332,112.76],[-7.31,112.75],[-7.2655,112.7483]]'::jsonb,
+    'Rute dinas operasional lancar tanpa hambatan'
 ) ON CONFLICT (id) DO NOTHING;

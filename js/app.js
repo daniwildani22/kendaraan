@@ -2477,7 +2477,7 @@ const App = (function () {
     const currentLng = state.currentGpsPosition ? state.currentGpsPosition.lng : 112.7483;
 
     const visit = {
-      id: "vis-" + Date.now(),
+      id: (typeof crypto !== "undefined" && crypto.randomUUID) ? crypto.randomUUID() : ("vis-" + Date.now()),
       place_name: name,
       category,
       time: time || new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }),
