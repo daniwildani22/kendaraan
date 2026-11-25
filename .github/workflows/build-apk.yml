@@ -24,9 +24,8 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install Dependencies
-        run: |
-          npm install @capacitor/core @capacitor/cli @capacitor/android --save
+      - name: Install Capacitor CLI
+        run: npm install @capacitor/core @capacitor/cli @capacitor/android
 
       - name: Prepare Web Assets
         run: |
@@ -36,16 +35,7 @@ jobs:
       - name: Ensure Capacitor Config
         run: |
           if [ ! -f "capacitor.config.json" ]; then
-            cat << 'EOF' > capacitor.config.json
-            {
-              "appId": "com.kendaratrack.app",
-              "appName": "KendaraTrack",
-              "webDir": "www",
-              "server": {
-                "androidScheme": "https"
-              }
-            }
-            EOF
+            echo '{"appId":"com.kendaratrack.app","appName":"KendaraTrack","webDir":"www","server":{"androidScheme":"https"}}' > capacitor.config.json
           fi
 
       - name: Setup Android Project
