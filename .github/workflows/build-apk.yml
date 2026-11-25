@@ -24,20 +24,39 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install Node Dependencies
-        run: npm install
+      - name: Install Dependencies
+        run: |
+          npm install @capacitor/core @capacitor/cli @capacitor/android --save
 
-      - name: Prepare Web Assets (www directory)
+      - name: Prepare Web Assets
         run: |
           mkdir -p www
           cp -r index.html manifest.json sw.js css js icons services www/ 2>/dev/null || true
-          npm run build || true
 
-      - name: Sync Capacitor Android
-        run: npx cap sync android
+      - name: Ensure Capacitor Config
+        run: |
+          if [ ! -f "capacitor.config.json" ]; then
+            cat << 'EOF' > capacitor.config.json
+            {
+              "appId": "com.kendaratrack.app",
+              "appName": "KendaraTrack",
+              "webDir": "www",
+              "server": {
+                "androidScheme": "https"
+              }
+            }
+            EOF
+          fi
 
-      - name: Grant Execute Permission for Gradlew
-        run: chmod +x android/gradlew
+      - name: Setup Android Project
+        run: |
+          if [ ! -d "android" ] || [ ! -f "android/gradlew" ] || [ ! -f "android/gradle/wrapper/gradle-wrapper.jar" ]; then
+            rm -rf android
+            npx cap add android
+          else
+            npx cap sync android
+          fi
+          chmod +x android/gradlew
 
       - name: Build Debug APK
         run: |
