@@ -1,6 +1,8 @@
 {
   "version": 2,
   "name": "kendaratrack",
+  "buildCommand": "echo 'Build OK'",
+  "outputDirectory": ".",
   "cleanUrls": true,
   "trailingSlash": false,
   "headers": [
